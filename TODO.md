@@ -1,0 +1,5 @@
+- [ ] Add header section to settings page
+- [ ] Add profile section with form fields
+- [ ] Add notification preferences section
+- [ ] Add safety settings section
+- [ ] Add account management section

@@ -22,7 +22,7 @@ export function AppSidebar() {
     <Sidebar className="w-64 bg-green-50 border-r flex flex-col">
       
       {/* Header */}
-      <SidebarHeader className="px-4 py-4 bg-green-50 border-b">
+      <SidebarHeader className="px-4 py-5 bg-green-50 border-b">
         <div className="flex items-center gap-2">
           <Plane className="h-6 w-6 text-blue-400 transition-transform duration-200 hover:scale-110" />
           <span className="text-lg font-bold text-gray-700">Safe Travel</span>
