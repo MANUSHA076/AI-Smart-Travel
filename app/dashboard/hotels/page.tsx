@@ -37,7 +37,7 @@ const hotels = [
     image: "/hero3.jpg",
   },
   {
-    id: 2,
+    id: 4,
     name: "Ella Flower garden",
     location: "Ella, Sri Lanka",
     rating: 4.6,

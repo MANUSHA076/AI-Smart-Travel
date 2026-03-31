@@ -25,9 +25,19 @@ import {
   Map,
 } from "lucide-react"
 
+/* ---------------- TYPES ---------------- */
+
+type Alert = {
+  id: number
+  title: string
+  location: string
+  description: string
+  risk: "High" | "Medium" | "Low"
+}
+
 /* ---------------- MOCK DATA ---------------- */
 
-const alerts = [
+const alerts: Alert[] = [
   {
     id: 1,
     title: "Flood Warning",
@@ -56,8 +66,8 @@ const alerts = [
 
 /* ---------------- RISK BADGE ---------------- */
 
-function RiskBadge({ risk }: { risk: string }) {
-  const styles: any = {
+function RiskBadge({ risk }: { risk: Alert["risk"] }) {
+  const styles = {
     High: "bg-red-500 text-white",
     Medium: "bg-orange-500 text-white",
     Low: "bg-green-500 text-white",
@@ -72,12 +82,11 @@ function AlertCard({
   alert,
   onOpen,
 }: {
-  alert: any
+  alert: Alert
   onOpen: () => void
 }) {
   return (
     <Card className="hover:shadow-lg transition">
-
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -106,7 +115,6 @@ function AlertCard({
           View Details
         </Button>
       </CardFooter>
-
     </Card>
   )
 }
@@ -136,7 +144,7 @@ function MapPreview() {
 /* ---------------- PAGE ---------------- */
 
 export default function AlertsPage() {
-  const [selectedAlert, setSelectedAlert] = useState<any>(null)
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
 
   return (
     <>

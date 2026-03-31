@@ -22,7 +22,9 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.25.0",
     "lucide-react": "^0.562.0",
+    "mongoose": "^9.3.3",
     "next": "16.1.1",
+    "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "tailwind-merge": "^3.4.0"
