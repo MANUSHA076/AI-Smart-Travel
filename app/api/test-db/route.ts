@@ -1,4 +1,4 @@
-import { connectDB } from "@/lib/db"; // ඔයා හදපු file එකේ path එක මෙතනට දෙන්න
+import { connectDB } from "@/lib/db";
 import TravelAlert from "@/models/TravelAlert";
 import { NextResponse } from "next/server";
 
@@ -13,7 +13,7 @@ export async function GET() {
       message: "Heavy rains expected, stay indoors and avoid low-lying areas.",
     });
     return NextResponse.json({ message: "Travel alert created successfully" });
-}catch (error) {
+} catch (error) {
   return NextResponse.json({ message: "Error creating travel alert", error }, { status: 500 });
 }
 }

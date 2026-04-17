@@ -1,9 +1,25 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
-import { Card, CardContent} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import { AlertTriangle,Hotel,Route,MapPin,Clock,Star} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import RoutePreviewMap from "@/components/ReusableMap"
+import { useState } from "react"
+
+interface AnalysisData {
+  riskScore: number;
+  safetyLevel: string;
+  safeCity: string;
+  summary: string;
+  tips: string[];
+}
 export default function DashboardPage() {
   
+   const [from, setFrom] = useState("");
+    const [to, setTo] = useState("");
+    const [travelMode, setTravelMode] = useState("");
+    const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
 
   return (
     <div className="p-6 space-y-6">
@@ -62,23 +78,23 @@ export default function DashboardPage() {
 
      
       
-<Card>
-    <CardContent className="p-4">
+<Card className="overflow-hidden border-none shadow-none bg-transparent">
+  <CardHeader className="px-0">
+    <CardTitle className="text-xl">AI Recommended Route Map</CardTitle>
+    <CardDescription>
+      Visualizing the safest path from {from || "Start"} to {to || "Destination"}
+    </CardDescription>
+  </CardHeader>
 
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-lg">Map Preview</h2>
-        
-        <Button size="sm" variant="outline" className="bg-blue-600  hover:bg-blue-700 text-white">
-          View Full
-        </Button>
-      </div>
-
-      <div className="mt-4 h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-        <span className="text-sm text-muted-foreground">Map Preview</span>
-      </div>
-
-         
-    </CardContent>
+  <CardContent className="px-0 pb-0">
+    {/* මෙන්න මෙතනට තමයි අපි component එක දාන්නේ */}
+    <RoutePreviewMap 
+      from={from} 
+      to={to} 
+      travelMode={travelMode} 
+      height="500px" 
+    />
+  </CardContent>
 </Card>
 
 
