@@ -5,22 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/comp
 import { AlertTriangle,Hotel,Route,MapPin,Clock,Star} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import RoutePreviewMap from "@/components/ReusableMap"
-import { useState } from "react"
-
-interface AnalysisData {
-  riskScore: number;
-  safetyLevel: string;
-  safeCity: string;
-  summary: string;
-  tips: string[];
-}
 export default function DashboardPage() {
-  
-   const [from, setFrom] = useState("");
-    const [to, setTo] = useState("");
-    const [travelMode, setTravelMode] = useState("");
-    const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
-
   return (
     <div className="p-6 space-y-6">
 
@@ -82,16 +67,13 @@ export default function DashboardPage() {
   <CardHeader className="px-0">
     <CardTitle className="text-xl">AI Recommended Route Map</CardTitle>
     <CardDescription>
-      Visualizing the safest path from {from || "Start"} to {to || "Destination"}
+      Visualizing the safest path on the dashboard overview.
     </CardDescription>
   </CardHeader>
 
   <CardContent className="px-0 pb-0">
-    {/* මෙන්න මෙතනට තමයි අපි component එක දාන්නේ */}
     <RoutePreviewMap 
-      from={from} 
-      to={to} 
-      travelMode={travelMode} 
+      routeData={null}
       height="500px" 
     />
   </CardContent>

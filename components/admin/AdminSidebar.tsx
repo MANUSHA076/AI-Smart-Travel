@@ -14,7 +14,7 @@ export function AdminSidebar() {
   ]
 
   return (
-    <aside className="w-64 border-r bg-white flex flex-col h-screen sticky top-0">
+    <aside className="w-64 border-r bg-green-200 flex flex-col h-screen sticky top-0">
       <div className="p-6">
         <h2 className="text-xl font-bold text-blue-600 flex items-center gap-2">
           <span>✈️</span> Safe Travel Admin

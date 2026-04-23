@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react";
-import { Route, MapPin, Navigation, Loader2 } from "lucide-react"
+import { Route, MapPin, Navigation, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,25 +10,45 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import RoutePreviewMap from "@/components/ReusableMap";
 
+// පාරවල් කිහිපයක් සඳහා Interface එක Update කළා
 interface AnalysisData {
   riskScore: number;
   safetyLevel: string;
   safeCity: string;
   summary: string;
   tips: string[];
-  // ✅ MapLibre සඳහා අලුතින් එකතු කළ Coordinates array එක
-  routeCoordinates?: [number, number][]; 
+  // මෙතන දැන් route එකක් වෙනුවට ලැයිස්තුවක් එන්න පුළුවන්
+  allRoutes?: {
+    points: [number, number][];
+    color: "red" | "green";
+    distance?: string;
+    isRecommended: boolean;
+  }[];
+  routeSafetyPoints?: {
+    coordinate: [number, number];
+    label: string;
+    condition: string;
+    roadStatus: string;
+    temperature: number | null;
+    riskLevel: "low" | "medium" | "high";
+    description?: string; // අපි අලුතින් එකතු කරපු විස්තරය
+  }[];
+  routeWeatherSummary?: {
+    blockedSegments: number;
+    rainySegments: number;
+    sampledPoints: number;
+  };
 }
 
 export default function RoutesPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [travelMode, setTravelMode] = useState("");
+  const [travelMode, setTravelMode] = useState("car");
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAnalyze = async () => {
-    if (!from || !to || !travelMode) return alert("Please fill all fields");
+    if (!from || !to) return alert("Please enter both locations");
 
     setIsLoading(true);
     try {
@@ -52,118 +72,141 @@ export default function RoutesPage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-8">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Route className="h-8 w-8 text-primary" />
-          AI Route Analysis
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Find the safest and smartest route using AI insights
-        </p>
+    <div className="p-6 max-w-7xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Route className="h-8 w-8 text-primary" />
+            AI Safety Route Planner
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Analyzing real-time disaster zones and weather for your safety.
+          </p>
+        </div>
+        {analysis && (
+          <div className={`px-4 py-2 rounded-lg border-2 flex items-center gap-2 font-bold ${
+            analysis.riskScore > 5 ? "border-red-500 bg-red-50 text-red-700" : "border-green-500 bg-green-50 text-green-700"
+          }`}>
+            {analysis.riskScore > 5 ? <AlertTriangle /> : <CheckCircle2 />}
+            {analysis.safetyLevel.toUpperCase()} STATUS
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Side: Input Card */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        {/* Left Side: Controls & Results */}
         <div className="space-y-6">
-          <Card>
+          <Card className="shadow-md">
             <CardHeader>
-              <CardTitle>Route Details</CardTitle>
+              <CardTitle className="text-lg">Plan Your Trip</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-2"><MapPin className="h-4 w-4 text-red-500" /> From</Label>
-                <Input placeholder="e.g. Colombo" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <Label className="flex items-center gap-2"><MapPin className="h-4 w-4 text-red-500" /> Start Point</Label>
+                <Input placeholder="City or Place" value={from} onChange={(e) => setFrom(e.target.value)} />
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-2"><Navigation className="h-4 w-4 text-blue-500" /> To</Label>
-                <Input placeholder="e.g. Kandy" value={to} onChange={(e) => setTo(e.target.value)} />
+                <Label className="flex items-center gap-2"><Navigation className="h-4 w-4 text-blue-500" /> Destination</Label>
+                <Input placeholder="Target Destination" value={to} onChange={(e) => setTo(e.target.value)} />
               </div>
 
               <div className="space-y-2">
                 <Label>Travel Mode</Label>
                 <Select value={travelMode} onValueChange={setTravelMode}>
-                  <SelectTrigger><SelectValue placeholder="Select mode" /></SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="car">Car</SelectItem>
-                    <SelectItem value="bus">Bus</SelectItem>
-                    <SelectItem value="train">Train</SelectItem>
-                    <SelectItem value="walk">Walking</SelectItem>
-                    <SelectItem value="bike">Bike</SelectItem>
+                    <SelectItem value="car">🚗 Car / Van</SelectItem>
+                    <SelectItem value="bus">🚌 Public Bus</SelectItem>
+                    <SelectItem value="bike">🏍️ Motorbike</SelectItem>
+                    <SelectItem value="walk">🚶 Walking</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <Button className="w-full" onClick={handleAnalyze} disabled={isLoading}>
-                {isLoading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...</>
-                ) : (
-                  "Analyze Route"
-                )}
+              <Button className="w-full font-bold h-12" onClick={handleAnalyze} disabled={isLoading}>
+                {isLoading ? <><Loader2 className="mr-2 animate-spin" /> ANALYZING...</> : "SEARCH SAFE ROUTES"}
               </Button>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Right Side: Result Summary */}
-        <div className="space-y-6">
-          {!analysis ? (
-             <Card className="h-full border-dashed flex flex-col items-center justify-center p-10 text-center text-muted-foreground">
-                <div className="p-4 bg-muted rounded-full mb-4">
-                  <Route className="h-10 w-10 opacity-20" />
-                </div>
-                <p>Enter details and click analyze to see AI route suggestions</p>
-             </Card>
-          ) : (
-            <Card className="animate-in fade-in slide-in-from-bottom-2">
+          {analysis && (
+            <Card className="bg-primary/5 border-primary/20">
               <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg">AI Insight</CardTitle>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    analysis.riskScore <= 4 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                  }`}>
-                    {analysis.safetyLevel.toUpperCase()}
-                  </span>
-                </div>
+                <CardTitle className="text-md">AI Travel Recommendation</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-3 bg-muted rounded-lg text-sm leading-relaxed">
-                  {analysis.summary}
-                </div>
+              <CardContent className="space-y-4 text-sm">
+                <p className="leading-relaxed italic">{analysis.summary}</p>
                 <div className="space-y-2">
-                  <p className="text-sm font-bold flex items-center gap-2">🛡️ Safety Tips:</p>
-                  <ul className="grid grid-cols-1 gap-2">
-                    {analysis.tips.map((tip, i) => (
-                      <li key={i} className="text-xs bg-primary/5 p-2 rounded border-l-4 border-primary">{tip}</li>
-                    ))}
-                  </ul>
+                  <p className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Safety Tips:</p>
+                  {analysis.tips.map((tip, i) => (
+                    <div key={i} className="flex gap-2 items-start bg-white p-2 rounded border shadow-sm text-xs">
+                      <span className="text-primary font-bold">•</span> {tip}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
           )}
         </div>
-      </div>
 
-      {/* ✅ Full Width MapLibre Section */}
-      <Card className="overflow-hidden shadow-lg border-2">
-        <CardHeader className="bg-muted/50 border-b">
-          <CardTitle className="text-lg flex items-center gap-2">
-             <Navigation className="h-5 w-5" /> Live Route Preview
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {/* ප්‍රධාන වෙනස: 
-              දැන් අපි දෙන්නේ coordinates ටික. 
-              Analysis එකක් නැති වෙලාවට null යනවා. 
-          */}
-          <RoutePreviewMap 
-            routeData={analysis?.routeCoordinates || null} 
-            height="500px" 
-          />
-        </CardContent>
-      </Card>
+        {/* Right Side: Map & Details */}
+        <div className="space-y-6">
+          {/* Map Section */}
+          <Card className="overflow-hidden shadow-2xl border-2 border-slate-200">
+            <div className="bg-slate-900 text-white p-3 flex justify-between items-center text-sm font-medium">
+              <span className="flex items-center gap-2"><Navigation className="h-4 w-4" /> Live Map Preview</span>
+              {analysis && <span className="text-slate-400">{analysis.allRoutes?.length} routes identified</span>}
+            </div>
+            <CardContent className="p-0 relative">
+              <RoutePreviewMap 
+                // මෙතනදී Backend එකෙන් එන allRoutes array එකම දෙනවා
+                multiRoutes={analysis?.allRoutes || []}
+                safetyPoints={analysis?.routeSafetyPoints || []}
+                travelMode={travelMode}
+                height="600px" 
+              />
+              
+              {/* Route Legend Overlay */}
+              {analysis && (
+                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur p-3 rounded-lg shadow-lg border text-xs space-y-2 z-[1000]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-1.5 bg-green-500 rounded"></div> <span>Safe Route</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-1.5 bg-red-500 rounded"></div> <span>Danger Area Included</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Detailed Checkpoints Grid */}
+          {analysis?.routeSafetyPoints && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               {analysis.routeSafetyPoints.map((point, index) => (
+                 <Card key={index} className="overflow-hidden border-l-4 border-l-primary">
+                    <CardContent className="p-4">
+                       <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-sm">{point.label}</h4>
+                            <p className="text-xs text-muted-foreground">{point.roadStatus}</p>
+                          </div>
+                          <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            point.riskLevel === 'high' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                          }`}>
+                            {point.riskLevel.toUpperCase()}
+                          </div>
+                       </div>
+                       <p className="text-[11px] mt-2 text-slate-600">{point.description}</p>
+                    </CardContent>
+                 </Card>
+               ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
