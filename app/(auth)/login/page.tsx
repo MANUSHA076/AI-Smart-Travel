@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { LogIn, Loader2 } from "lucide-react"
 import { authClient } from "@/lib/auth-client";
 import { motion } from "framer-motion";
@@ -13,6 +14,8 @@ import { motion } from "framer-motion";
 
 
 export default function LoginPage() {
+  const router = useRouter()
+
   // 1. Login එකට අවශ්‍ය වෙන්නේ Email සහ Password විතරයි
   const [formData, setFormData] = useState({
     email: "",
@@ -24,25 +27,29 @@ export default function LoginPage() {
   e.preventDefault();
   setIsLoading(true);
 
-  // Better Auth හරහා Login වීම
+  // 1. කලින් විදිහටම Login වෙනවා
   const { error } = await authClient.signIn.email({
     email: formData.email,
     password: formData.password,
-    callbackURL: "/dashboard" // Login වුණාම යන්න ඕනේ page එක (උදා: Home)
-  }, {
-    onError: (ctx) => {
-      alert(ctx.error.message); // වැරදි Password එකක් ගැහුවොත් මෙතනින් දැනගන්න පුළුවන්
-    }
   });
 
-  if (!error) {
-    console.log("Login Success!");
-    // සාර්ථක නම් auto redirect වෙනවා, නැත්නම් useRouter පාවිච්චි කරන්න පුළුවන්
+  if (error) {
+    alert(error.message);
+  } else {
+    // 2. දැනට ලොග් වුණු user ගේ session එක ගන්නවා
+    const { data: session } = await authClient.getSession();
+    
+    // 3. Role එක අනුව Redirect කරනවා
+    const role = (session?.user as { role?: string } | undefined)?.role;
+
+    if (role === "admin") {
+      router.push("/admin/dashboard");
+    } else {
+      router.push("/dashboard");
+    }
   }
-  
   setIsLoading(false);
 };
-
   return (
     <motion.div
       initial={{ opacity: 0 }}

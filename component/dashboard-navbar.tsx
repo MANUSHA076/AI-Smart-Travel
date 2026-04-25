@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -35,24 +37,47 @@ import {
 
 export default function DashboardNavbar() {
   const [logoutOpen, setLogoutOpen] = useState(false)
+  const router = useRouter();
+
+  // 1. Session එක ලබා ගැනීම
+  const { data: session } = authClient.useSession();
+
+  // 2. නමේ මුල් අකුරු දෙක ලබා ගන්නා Function එක
+  const getInitials = (name: string) => {
+    if (!name) return "MT";
+    const names = name.split(" ");
+    if (names.length >= 2) {
+      // නමේ කොටස් දෙකක් හෝ වැඩි නම් මුල් අකුරු දෙක ගන්නවා
+      return `${names[0][0]}${names[1][0]}`.toUpperCase();
+    }
+    // එක නමක් පමණක් තිබේ නම් එහි මුල් අකුරු දෙක ගන්නවා
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/login");
+          router.refresh();
+        },
+      },
+    });
+  };
 
   return (
     <>
       <header className="flex items-center justify-between px-6 py-4 border-b bg-background">
-
         {/* LEFT */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon">
             <Menu className="h-5 w-5" />
           </Button>
-
           <h2 className="text-lg font-semibold">Dashboard</h2>
         </div>
 
         {/* RIGHT */}
         <div className="flex items-center gap-4">
-
-          {/* Notifications */}
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
           </Button>
@@ -62,34 +87,32 @@ export default function DashboardNavbar() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="flex items-center gap-2 px-2"
+                className="flex items-center gap-2 px-2 hover:bg-accent"
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/avatar.png" />
-                  <AvatarFallback>MT</AvatarFallback>
+                  <AvatarImage src={session?.user.image || ""} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {/* මෙන්න මෙතනදී Initials පෙන්වනවා */}
+                    {getInitials(session?.user.name || "User")}
+                  </AvatarFallback>
                 </Avatar>
 
-                <span className="text-sm font-medium">
-                  Manusha
-                </span>
+                
               </Button>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem className="flex items-center gap-2">
+              <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
                 <User className="h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-
-              <DropdownMenuItem className="flex items-center gap-2">
+              <DropdownMenuItem className="flex items-center gap-2 cursor-pointer">
                 <Settings className="h-4 w-4" />
                 Settings
               </DropdownMenuItem>
-
               <DropdownMenuSeparator />
-
               <DropdownMenuItem
-                className="flex items-center gap-2 text-red-600"
+                className="flex items-center gap-2 text-red-600 cursor-pointer"
                 onClick={() => setLogoutOpen(true)}
               >
                 <LogOut className="h-4 w-4" />
@@ -97,7 +120,6 @@ export default function DashboardNavbar() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
         </div>
       </header>
 
@@ -107,25 +129,23 @@ export default function DashboardNavbar() {
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>
           </DialogHeader>
-
           <p className="text-sm text-muted-foreground">
             Are you sure you want to log out of your account?
           </p>
-
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex gap-2 mt-4">
             <Button
               variant="outline"
+              className="flex-1"
               onClick={() => setLogoutOpen(false)}
             >
               Cancel
             </Button>
-
             <Button
               variant="destructive"
+              className="flex-1"
               onClick={() => {
-                setLogoutOpen(false)
-                console.log("Logout confirmed")
-                // later: auth signOut()
+                setLogoutOpen(false);
+                handleLogout();
               }}
             >
               Logout
