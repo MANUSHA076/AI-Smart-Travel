@@ -11,7 +11,7 @@ interface SafetyPoint {
   condition?: string;
   roadStatus?: string;
   temperature?: number | null;
-  riskLevel?: 'low' | 'medium' | 'high';
+  riskLevel?: 'low' | 'medium' | 'high' ;
 }
 
 interface MapProps {
@@ -127,8 +127,18 @@ export default function ReusableMap({
         point.riskLevel === 'high' ? 'bg-red-600' : 
         point.riskLevel === 'medium' ? 'bg-orange-500' : 'bg-emerald-500';
 
-      markerElement.className = `flex flex-col items-center justify-center w-7 h-7 rounded-full border-2 border-white shadow-lg text-white cursor-pointer ${riskColor}`;
-      markerElement.innerHTML = `<span style="font-size: 12px;">${point.riskLevel === 'high' ? '⚠️' : 'i'}</span>`;
+      markerElement.className = `flex items-center justify-center w-9 h-9 rounded-full border-2 border-white shadow-xl text-white cursor-pointer ${riskColor}`;
+      markerElement.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" class="w-5 h-5 drop-shadow-sm">
+          <path
+            d="M12 2.5c-3.59 0-6.5 2.91-6.5 6.5 0 4.88 6.5 12.5 6.5 12.5S18.5 13.88 18.5 9c0-3.59-2.91-6.5-6.5-6.5z"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linejoin="round"
+          />
+          <circle cx="12" cy="9" r="2.1" fill="currentColor" opacity="0.95" />
+        </svg>
+      `;
 
       // Marker එකට ලඟින් යන routes හොයනවා (1.5km radius)
       const affectedRouteNumbers = multiRoutes
@@ -156,7 +166,7 @@ export default function ReusableMap({
       const popup = new maplibregl.Popup({ offset: 15 }).setHTML(`
         <div style="padding: 8px; font-family: sans-serif; min-width: 150px;">
           <strong style="display: block; font-size: 14px; color: #333;">${point.label || 'Location'}</strong>
-          <div style="margin-top: 4px; font-size: 11px; font-weight: bold; color: ${point.riskLevel === 'high' ? 'red' : 'orange'};">
+          <div style="margin-top: 4px; font-size: 11px; font-weight: bold; color: ${point.riskLevel === 'high' ? 'red' : point.riskLevel === 'medium' ? 'orange' : 'green'};">
             ${point.riskLevel?.toUpperCase()} RISK
           </div>
           <div style="margin-top: 6px; font-size: 12px; color: #1f2937;">

@@ -15,13 +15,15 @@ interface RouteSummary {
 
 interface RiskZone {
   name: string
-  riskLevel: 'High' | 'Medium'
+  riskLevel: 'High' | 'Medium' | 'Low'
   description?: string
   location: {
     lat: number
     lng: number
   }
 }
+
+type MapRiskLevel = 'low' | 'medium' | 'high'
 
 interface OsrmRoute {
   geometry: {
@@ -40,6 +42,13 @@ export default function RiskZonesPage() {
   const [routes, setRoutes] = useState<RouteSummary[]>([]) // පාරවල් කිහිපයක් තබා ගැනීමට
   const [isRouteLoading, setIsRouteLoading] = useState(false)
   const [savedZones, setSavedZones] = useState<RiskZone[]>([])
+
+  const safetyPoints = savedZones.map((zone) => ({
+    coordinate: [zone.location.lng, zone.location.lat] as [number, number],
+    riskLevel: zone.riskLevel.toLowerCase() as MapRiskLevel,
+    label: zone.name,
+    description: zone.description,
+  }))
 
   // 1. Database එකෙන් දත්ත ගේන Function එක
   const fetchZones = async () => {
@@ -157,18 +166,13 @@ export default function RiskZonesPage() {
     <div className="space-y-4 p-4 bg-slate-50 min-h-screen">
       <h1 className="text-2xl font-bold text-slate-800">Admin AI Safety Control</h1>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Map Section */}
         <div className="lg:col-span-2 bg-white p-2 rounded-xl shadow-md border">
           <MapWithNoSSR 
             multiRoutes={routes} // Array එකක් යවනවා
             height="650px" 
-            safetyPoints={savedZones.map((zone) => ({
-              coordinate: [zone.location.lng, zone.location.lat],
-              riskLevel: zone.riskLevel.toLowerCase(),
-              label: zone.name,
-              description: zone.description,
-            }))}
+            safetyPoints={safetyPoints}
           />
         </div>
 
@@ -181,6 +185,7 @@ export default function RiskZonesPage() {
             <select value={riskLevel} onChange={(e)=>setRiskLevel(e.target.value)} className="w-full p-2 border rounded mb-3">
               <option value="High">High Risk (Landslide/Flood)</option>
               <option value="Medium">Medium Risk</option>
+              <option value="Low">Low Risk</option>
             </select>
             <textarea
               value={description}

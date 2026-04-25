@@ -170,7 +170,7 @@ export default function RoutesPage() {
               
               {/* Route Legend Overlay */}
               {analysis && (
-                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur p-3 rounded-lg shadow-lg border text-xs space-y-2 z-[1000]">
+                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur p-3 rounded-lg shadow-lg border text-xs space-y-2 z-1000">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-1.5 bg-green-500 rounded"></div> <span>Safe Route</span>
                   </div>
@@ -194,7 +194,7 @@ export default function RoutesPage() {
                             <p className="text-xs text-muted-foreground">{point.roadStatus}</p>
                           </div>
                           <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            point.riskLevel === 'high' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                            point.riskLevel === 'high' ? 'bg-red-100 text-red-600' : point.riskLevel === 'medium' ? 'bg-orange-100 text-orange-600' : 'bg-yellow-100 text-yellow-700'
                           }`}>
                             {point.riskLevel.toUpperCase()}
                           </div>
