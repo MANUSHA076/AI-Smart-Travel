@@ -43,6 +43,7 @@ export default function Features() {
         >
           <h2 className="text-3xl font-bold text-gray-900">
             Why SmartTravel?
+            
           </h2>
           <p className="mt-3 text-gray-600">
             AI-powered safety features for smarter travel decisions.

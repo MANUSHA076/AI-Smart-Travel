@@ -162,6 +162,7 @@ export default function ReusableMap({
         point.roadStatus ||
         'No specific hazard details reported.';
 
+
       // Popup එක (Click කළාම පේන විස්තරය)
       const popup = new maplibregl.Popup({ offset: 15 }).setHTML(`
         <div style="padding: 8px; font-family: sans-serif; min-width: 150px;">

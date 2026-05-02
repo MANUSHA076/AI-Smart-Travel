@@ -1,11 +1,47 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
 import { AlertTriangle,Hotel,Route,MapPin,Clock,Star} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import RoutePreviewMap from "@/components/ReusableMap"
+
+interface OverviewRouteData {
+  allRoutes?: {
+    points: [number, number][];
+    color: "red" | "green" | "orange";
+    distance?: string;
+    riskReason?: string;
+    isRecommended?: boolean;
+  }[];
+  routeSafetyPoints?: {
+    coordinate: [number, number];
+    label: string;
+    condition: string;
+    roadStatus: string;
+    temperature: number | null;
+    riskLevel: "low" | "medium" | "high";
+    description?: string;
+  }[];
+  travelMode?: string;
+}
+
 export default function DashboardPage() {
+  const [overviewRouteData, setOverviewRouteData] = useState<OverviewRouteData | null>(null)
+
+  useEffect(() => {
+    const saved = localStorage.getItem("latestRouteAnalysis")
+    if (!saved) return
+
+    try {
+      const parsed = JSON.parse(saved) as OverviewRouteData
+      setOverviewRouteData(parsed)
+    } catch {
+      setOverviewRouteData(null)
+    }
+  }, [])
+
   return (
     <div className="p-6 space-y-6">
 
@@ -67,13 +103,15 @@ export default function DashboardPage() {
   <CardHeader className="px-0">
     <CardTitle className="text-xl">AI Recommended Route Map</CardTitle>
     <CardDescription>
-      Visualizing the safest path on the dashboard overview.
+      Visualizing the latest analyzed path. Click a risk point to view details.
     </CardDescription>
   </CardHeader>
 
   <CardContent className="px-0 pb-0">
     <RoutePreviewMap 
-      routeData={null}
+      multiRoutes={overviewRouteData?.allRoutes || []}
+      safetyPoints={overviewRouteData?.routeSafetyPoints || []}
+      travelMode={overviewRouteData?.travelMode || "car"}
       height="500px" 
     />
   </CardContent>

@@ -1,51 +1,62 @@
 "use client"
-import { LayoutDashboard, Users, MapPin, AlertTriangle, Settings, HelpCircle } from "lucide-react"
+import { LayoutDashboard, Users, MapPin, AlertTriangle, Settings, HelpCircle, Hotel } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const sidebarStyle = {
+    background: "#F2FFF5",
+  }
 
   const links = [
     { name: "Overview", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Manage Users", href: "/admin/users", icon: Users },
     { name: "Risk Zones", href: "/admin/risk-zones", icon: MapPin },
     { name: "Safety Alerts", href: "/admin/alerts", icon: AlertTriangle },
+    { name: "Hotels", href: "/admin/hotels", icon: Hotel},
   ]
 
   return (
-    <aside className="w-64 border-r bg-green-200 flex flex-col h-screen sticky top-0">
-      <div className="p-6">
-        <h2 className="text-xl font-bold text-blue-600 flex items-center gap-2">
+    <aside
+      className="w-64 border-r border-slate-900/10 flex flex-col h-screen sticky top-0 text-slate-900"
+      style={sidebarStyle}
+    >
+<div className="p-6">
+        <h2 className="brand-logo text-lg font-bold text-slate-900 flex items-center gap-2">
           <span>✈️</span> Safe Travel Admin
         </h2>
       </div>
       
       <nav className="flex-1 px-4 space-y-2">
         {links.map((link) => {
-          // දැනට ඉන්න URL එක අනුව active එක තීරණය කරයි
-          const isActive = pathname === link.href
+          const isActive =
+            link.href === "/admin/dashboard"
+              ? pathname === link.href
+              : pathname === link.href || pathname.startsWith(`${link.href}/`)
           
           return (
             <Link
               key={link.name}
               href={link.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors w-full ${
-                isActive ? "bg-blue-600 text-white shadow-md" : "text-slate-600 hover:bg-slate-100"
+              className={`sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 w-full text-sm ${
+                isActive
+                  ? "active bg-blue-300 text-black shadow-md border "
+                  : "text-slate-700 hover:bg-blue-200 hover:text-blue-900"
               }`}
             >
-              <link.icon className="h-5 w-5" />
+              <link.icon className="sidebar-icon h-5 w-5 transition-transform duration-300" />
               <span className="font-medium">{link.name}</span>
             </Link>
           )
         })}
       </nav>
 
-      <div className="p-4 border-t space-y-1">
-        <button className="flex items-center gap-3 px-4 py-2 w-full text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+      <div className="p-4 border-t border-slate-900/10 space-y-1">
+        <button className="footer-button flex items-center gap-3 px-4 py-2 w-full text-slate-700 hover:bg-blue-200 hover:text-blue-900 rounded-lg transition-all duration-300 text-sm">
           <Settings className="h-5 w-5" /> <span>Settings</span>
         </button>
-        <button className="flex items-center gap-3 px-4 py-2 w-full text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+        <button className="footer-button flex items-center gap-3 px-4 py-2 w-full text-slate-700 hover:bg-blue-200 hover:text-blue-900 rounded-lg transition-all duration-300 text-sm">
           <HelpCircle className="h-5 w-5" /> <span>Help</span>
         </button>
       </div>

@@ -166,7 +166,7 @@ export default function RiskZonesPage() {
     <div className="space-y-4 p-4 bg-slate-50 min-h-screen">
       <h1 className="text-2xl font-bold text-slate-800">Admin AI Safety Control</h1>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Map Section */}
         <div className="lg:col-span-2 bg-white p-2 rounded-xl shadow-md border">
           <MapWithNoSSR 

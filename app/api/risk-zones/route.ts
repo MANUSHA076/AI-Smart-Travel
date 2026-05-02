@@ -5,8 +5,15 @@ import RiskZone from "@/models/RiskZone";
 export async function GET() {
     try {
         await connectDB();
-        const riskZones = await RiskZone.find({});
-        return NextResponse.json(riskZones,{ status: 200 });
+    // Fetch all zones sorted by newest first, then keep only the latest per location name
+    const riskZones = await RiskZone.find({}).sort({ createdAt: -1 });
+    const dedup = new Map<string, any>();
+    for (const z of riskZones) {
+      const key = (z.name || "").toString().toLowerCase().trim();
+      if (!dedup.has(key)) dedup.set(key, z);
+    }
+    const uniqueZones = Array.from(dedup.values());
+    return NextResponse.json(uniqueZones, { status: 200 });
 
     }catch {
         return NextResponse.json({ error: "Failed to fetch risk zones" },

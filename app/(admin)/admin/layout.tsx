@@ -7,7 +7,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        {/* මෙහිදී Props යවන්න අවශ්‍ය නැත */}
+        
         <AdminSidebar /> 
         
         <div className="flex flex-col flex-1">

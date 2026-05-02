@@ -1,71 +1,64 @@
 "use client"
-
+import { LayoutDashboard, AlertTriangle, Route, Hotel, Settings, CircleHelpIcon } from "lucide-react"
 import Link from "next/link"
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarHeader } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
 import { usePathname } from "next/navigation"
-import { Plane, LayoutDashboard, AlertTriangle, Route, Hotel, User, Settings, CircleHelpIcon } from "lucide-react"
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const sidebarStyle = {
+    background: "#F2FFF5",
+  }
 
-  const menuItems = [
-    { label: "Overview", icon: <LayoutDashboard className="h-5 w-5" />, href: "/dashboard" },
-    { label: "Safety Alerts", icon: <AlertTriangle className="h-5 w-5" />, href: "/dashboard/alerts" },
-    { label: "AI Routes", icon: <Route className="h-5 w-5" />, href: "/dashboard/routes" },
-    { label: "Hotels", icon: <Hotel className="h-5 w-5" />, href: "/dashboard/hotels" },
-    { label: "Settings", icon: <Settings className="h-5 w-5" />, href: "/dashboard/settings" },
-    { label: "Help", icon: <CircleHelpIcon className="h-5 w-5" />, href: "/dashboard/help" },
+  const links = [
+    { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Safety Alerts", href: "/dashboard/alerts", icon: AlertTriangle },
+    { name: "AI Routes", href: "/dashboard/routes", icon: Route },
+    { name: "Hotels", href: "/dashboard/hotels", icon: Hotel },
   ]
 
   return (
-    <Sidebar className="w-64 bg-green-50 border-r flex flex-col">
+    <aside
+      className="w-64 border-r border-slate-900/10 flex flex-col h-screen sticky top-0 text-slate-900"
+      style={sidebarStyle}
+    >
+<div className="p-6">
+        <h2 className="brand-logo text-xl font-bold text-slate-900 flex items-center gap-2">
+          <span>✈️</span> Safe Travel
+        </h2>
+      </div>
       
-      {/* Header */}
-      <SidebarHeader className="px-4 py-5 bg-green-50 border-b">
-        <div className="flex items-center gap-2">
-          <Plane className="h-6 w-6 text-blue-400 transition-transform duration-200 hover:scale-110" />
-          <span className="text-lg font-bold text-gray-700">Safe Travel</span>
-        </div>
-      </SidebarHeader>
+<nav className="flex-1 px-4 space-y-2">
+        {links.map((link) => {
+          const isActive =
+            link.href === "/dashboard"
+              ? pathname === link.href
+              : pathname === link.href || pathname.startsWith(`${link.href}/`)
+          
+          return (
+            <Link
+              key={link.name}
+              href={link.href}
+              className={`sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 w-full ${
+                isActive
+                  ? "active bg-blue-300 text-black shadow-md border"
+                  : "text-slate-700 hover:bg-blue-200 hover:text-blue-900"
+              }`}
+            >
+              <link.icon className="sidebar-icon h-5 w-5 transition-transform duration-300" />
+              <span className="font-medium">{link.name}</span>
+            </Link>
+          )
+        })}
+      </nav>
 
-      {/* Menu Items */}
-      <SidebarContent className="flex-1 p-4">
-        <SidebarGroup className="flex flex-col gap-2">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <Link key={item.href} href={item.href} passHref>
-                <Button
-                  variant="ghost"
-                  className={`w-full justify-start gap-2 px-4 py-2 text-bold rounded-md transition-colors duration-200
-                    ${isActive ? "bg-blue-500 text-white hover:bg-blue-600" : "text-gray-700 hover:bg-blue-100"}
-                  `}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </Button>
-              </Link>
-            )
-          })}
-        </SidebarGroup>
-      </SidebarContent>
-
-      {/* Profile Footer */}
-      <SidebarFooter className="p-4 border-t">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-blue-100 transition-colors duration-200"
-        >
-          <User className="h-5 w-5" />
-          Profile
-        </Button>
-      </SidebarFooter>
-
-      {/* Bottom Footer */}
-      <SidebarFooter className="mt-auto p-4 border-t text-sm text-gray-500">
-        © 2026 Safe Travel
-      </SidebarFooter>
-    </Sidebar>
+      <div className="p-4 border-t border-slate-900/10 space-y-1">
+        <button className="footer-button flex items-center gap-3 px-4 py-2 w-full text-slate-700 hover:bg-blue-200 hover:text-blue-900 rounded-lg transition-all duration-300">
+          <Settings className="h-5 w-5" /> <span>Settings</span>
+        </button>
+        <button className="footer-button flex items-center gap-3 px-4 py-2 w-full text-slate-700 hover:bg-blue-200 hover:text-blue-900 rounded-lg transition-all duration-300">
+          <CircleHelpIcon className="h-5 w-5" /> <span>Help</span>
+        </button>
+      </div>
+    </aside>
   )
 }

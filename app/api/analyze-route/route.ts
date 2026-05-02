@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
+import { connectDB } from "@/lib/db";
+import RiskZone from "@/models/RiskZone";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type RouteCoordinate = [number, number];
 
@@ -12,19 +16,13 @@ type SafetyPoint = {
   roadStatus: string;
   temperature: number | null;
   riskLevel: "low" | "medium" | "high";
+  description?: string;
 };
 
-type WeatherSnapshot = {
-  temperature: number;
-  precipitation: number;
-  weatherCode: number;
-  condition: string;
-};
-
-type GeoLocation = {
-  latitude: number;
-  longitude: number;
+type AdminHighRiskZone = {
+  coordinate: RouteCoordinate;
   name: string;
+  description: string;
 };
 
 type RouteSummary = {
@@ -34,319 +32,395 @@ type RouteSummary = {
   tips: string[];
 };
 
-const weatherCodeMap: Record<number, string> = {
-  0: "Clear sky",
-  1: "Mostly clear",
-  2: "Partly cloudy",
-  3: "Overcast",
-  45: "Fog",
-  48: "Depositing rime fog",
-  51: "Light drizzle",
-  53: "Drizzle",
-  55: "Dense drizzle",
-  61: "Light rain",
-  63: "Rain",
-  65: "Heavy rain",
-  66: "Freezing rain",
-  67: "Heavy freezing rain",
-  71: "Light snow",
-  73: "Snow",
-  75: "Heavy snow",
-  80: "Rain showers",
-  81: "Heavy showers",
-  82: "Violent showers",
-  95: "Thunderstorm",
-  96: "Thunderstorm with hail",
-  99: "Thunderstorm with heavy hail",
+type GeoLocation = {
+  lat: number;
+  lng: number;
 };
 
-function normalizeSriLankaRoute(points: RouteCoordinate[]): RouteCoordinate[] {
-  return points.filter(([longitude, latitude]) => {
-    return longitude >= 79 && longitude <= 82 && latitude >= 5 && latitude <= 10;
-  });
-}
+type RoadRoute = {
+  points: RouteCoordinate[];
+  distanceMeters: number;
+};
 
-function createFallbackRoute(start: RouteCoordinate, destination: RouteCoordinate, pointCount = 16): RouteCoordinate[] {
-  const midLongitude = (start[0] + destination[0]) / 2;
-  const midLatitude = (start[1] + destination[1]) / 2;
-  const deltaLongitude = destination[0] - start[0];
-  const deltaLatitude = destination[1] - start[1];
-  const curveOffset = Math.max(0.12, Math.min(0.45, Math.hypot(deltaLongitude, deltaLatitude) * 0.18));
-  const controlLongitude = midLongitude - deltaLatitude * curveOffset;
-  const controlLatitude = midLatitude + deltaLongitude * curveOffset;
+type WeatherSnapshot = {
+  condition: string;
+  temperature: number | null;
+  isRainy: boolean;
+};
 
-  const route: RouteCoordinate[] = [];
+type OSRMRoute = {
+  geometry: { coordinates: RouteCoordinate[] };
+  distance: number;
+};
 
-  for (let index = 0; index < pointCount; index++) {
-    const t = index / (pointCount - 1);
-    const oneMinusT = 1 - t;
-    const longitude = oneMinusT * oneMinusT * start[0] + 2 * oneMinusT * t * controlLongitude + t * t * destination[0];
-    const latitude = oneMinusT * oneMinusT * start[1] + 2 * oneMinusT * t * controlLatitude + t * t * destination[1];
-    route.push([longitude, latitude]);
-  }
+type OSRMResponse = {
+  code: string;
+  routes: OSRMRoute[];
+};
 
-  return route;
-}
+type RiskZoneDocument = {
+  _id?: string;
+  name?: string;
+  description?: string;
+  location?: { lat: number; lng: number };
+  riskLevel: string;
+};
 
-function anchorRouteEndpoints(points: RouteCoordinate[], start: RouteCoordinate, destination: RouteCoordinate): RouteCoordinate[] {
-  if (points.length === 0) {
-    return createFallbackRoute(start, destination);
-  }
+// ─── Geocoding ────────────────────────────────────────────────────────────────
 
-  const normalized = normalizeSriLankaRoute(points);
-
-  if (normalized.length < 2) {
-    return createFallbackRoute(start, destination);
-  }
-
-  const anchored = [...normalized];
-  anchored[0] = start;
-  anchored[anchored.length - 1] = destination;
-
-  return anchored;
+function toCoordinate(geo: GeoLocation | null): RouteCoordinate {
+  if (!geo) return [0, 0];
+  return [geo.lng, geo.lat];
 }
 
 async function geocodeSriLankaLocation(locationName: string): Promise<GeoLocation | null> {
-  const response = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(locationName)}&count=1&language=en&format=json&countryCode=LK`,
-    { next: { revalidate: 3600 } }
-  );
-
-  if (!response.ok) {
-    return null;
-  }
-
-  const data = await response.json();
-  const result = data?.results?.[0];
-
-  if (!result) {
-    return null;
-  }
-
-  return {
-    latitude: Number(result.latitude),
-    longitude: Number(result.longitude),
-    name: result.name || locationName,
-  };
-}
-
-function toCoordinate(location: GeoLocation): RouteCoordinate {
-  return [location.longitude, location.latitude];
-}
-
-function getRoutingProfile(travelMode: string) {
-  switch (travelMode) {
-    case "walk":
-      return "foot";
-    case "bike":
-      return "bike";
-    case "bus":
-    case "train":
-    case "car":
-    default:
-      return "driving";
-  }
-}
-
-async function fetchRoadRoute(
-  startCoordinate: RouteCoordinate,
-  destinationCoordinate: RouteCoordinate,
-  travelMode: string
-): Promise<RouteCoordinate[]> {
-  const profile = getRoutingProfile(travelMode);
-  const response = await fetch(
-    `https://router.project-osrm.org/route/v1/${profile}/${startCoordinate[0]},${startCoordinate[1]};${destinationCoordinate[0]},${destinationCoordinate[1]}?overview=full&geometries=geojson&steps=false&alternatives=false`,
-    { next: { revalidate: 900 } }
-  );
-
-  if (!response.ok) {
-    throw new Error("Road routing lookup failed");
-  }
-
-  const data = await response.json();
-  const coordinates = data?.routes?.[0]?.geometry?.coordinates;
-
-  if (!Array.isArray(coordinates) || coordinates.length < 2) {
-    throw new Error("No road route returned");
-  }
-
-  return coordinates
-    .filter((point: unknown): point is [number, number] => Array.isArray(point) && point.length >= 2)
-    .map(([longitude, latitude]) => [Number(longitude), Number(latitude)] as RouteCoordinate)
-    .filter(([longitude, latitude]) => Number.isFinite(longitude) && Number.isFinite(latitude));
-}
-
-async function analyzeRouteSummary(startLocation: string, destination: string, travelMode: string): Promise<RouteSummary> {
-  const completion = await groq.chat.completions.create({
-    messages: [
-      {
-        role: "system",
-        content: "You are a travel safety expert specialized in Sri Lankan geography. You must respond ONLY in a valid JSON format."
-      },
-      {
-        role: "user",
-        content: `Analyze travel safety from ${startLocation} to ${destination} in Sri Lanka using ${travelMode}. 
-Return a JSON object with: 
-"riskScore": (number), 
-"safetyLevel": (string), 
-"summary": (string), 
-"tips": (array of short strings). 
-Do not include route coordinates.`
-      },
-    ],
-    model: "llama-3.3-70b-versatile",
-    response_format: { type: "json_object" },
-  });
-
-  const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
-
-  return {
-    riskScore: Number(parsed.riskScore ?? 5),
-    safetyLevel: String(parsed.safetyLevel ?? "medium"),
-    summary: String(parsed.summary ?? "Route analyzed with limited safety data."),
-    tips: Array.isArray(parsed.tips) ? parsed.tips.map((tip: unknown) => String(tip)) : [],
-  };
-}
-
-function sampleCoordinates(points: RouteCoordinate[], maxPoints = 6): RouteCoordinate[] {
-  if (points.length <= maxPoints) {
-    return points;
-  }
-
-  const sampled: RouteCoordinate[] = [];
-  const step = Math.max(1, Math.floor(points.length / (maxPoints - 1)));
-
-  for (let index = 0; index < points.length; index += step) {
-    sampled.push(points[index]);
-    if (sampled.length === maxPoints - 1) {
-      break;
+  try {
+    if (!locationName) return null;
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+        locationName + ", Sri Lanka"
+      )}&format=json&limit=1`,
+      { headers: { "User-Agent": "AI-Smart-Travel" } }
+    );
+    const data = await response.json();
+    if (data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
     }
-  }
-
-  sampled.push(points[points.length - 1]);
-  return sampled;
+    return null;
+  } catch { return null; }
 }
 
-function describeWeatherCode(code: number): string {
-  return weatherCodeMap[code] || "Unknown conditions";
+// ─── OSRM — Guaranteed 2 routes ───────────────────────────────────────────────
+// Colombo→Kandy: alternatives=true directly gives 2
+// Galle→Matara:  midpoint waypoint fallback creates 2nd route
+
+async function fetchRoadRoutes(
+  start: RouteCoordinate,
+  end: RouteCoordinate,
+  travelMode: string
+): Promise<RoadRoute[]> {
+  try {
+    const mode = travelMode.toLowerCase() === "walking" ? "foot" : "driving";
+
+    // Call 1: direct + alternatives
+    const res1 = await fetch(
+      `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson&alternatives=true`,
+      { headers: { "User-Agent": "AI-Smart-Travel" } }
+    );
+    const data1: OSRMResponse = await res1.json();
+    const directRoutes: RoadRoute[] = (data1.routes || []).map((r: OSRMRoute) => ({
+      points: r.geometry.coordinates as RouteCoordinate[],
+      distanceMeters: r.distance,
+    }));
+
+    if (directRoutes.length >= 2) return directRoutes.slice(0, 2);
+
+    // Call 2: midpoint waypoint fallback
+    const midLng = (start[0] + end[0]) / 2;
+    const midLat = (start[1] + end[1]) / 2;
+    const res2 = await fetch(
+      `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${midLng},${midLat};${end[0]},${end[1]}?overview=full&geometries=geojson`,
+      { headers: { "User-Agent": "AI-Smart-Travel" } }
+    );
+    const data2: OSRMResponse = await res2.json();
+    const waypointRoute = data2.routes?.[0];
+
+    const results = [...directRoutes];
+    if (waypointRoute) {
+      results.push({
+        points: waypointRoute.geometry.coordinates as RouteCoordinate[],
+        distanceMeters: waypointRoute.distance,
+      });
+    }
+    return results.slice(0, 2);
+  } catch { return []; }
 }
 
-function deriveRiskLevel(snapshot: WeatherSnapshot): SafetyPoint["riskLevel"] {
-  const severeRain = snapshot.precipitation >= 8 || [65, 67, 82, 95, 96, 99].includes(snapshot.weatherCode);
-  const wetRoad = snapshot.precipitation > 0 || [51, 53, 55, 61, 63, 65, 80, 81, 82].includes(snapshot.weatherCode);
+function anchorRouteEndpoints(
+  points: RouteCoordinate[],
+  start: RouteCoordinate,
+  end: RouteCoordinate
+): RouteCoordinate[] {
+  if (points.length === 0) return [start, end];
+  if (points.length === 1) return [start, points[0], end];
+  return [start, ...points, end];
+}
 
-  if (severeRain) {
-    return "high";
+function sampleCoordinates(coordinates: RouteCoordinate[], sampleSize = 5): RouteCoordinate[] {
+  if (coordinates.length <= sampleSize) return coordinates;
+  const step = Math.floor(coordinates.length / sampleSize);
+  return coordinates
+    .filter((_, i) => i % step === 0 || i === coordinates.length - 1)
+    .slice(0, sampleSize);
+}
+
+// ─── Weather ──────────────────────────────────────────────────────────────────
+
+async function fetchWeatherSnapshot(coordinate: RouteCoordinate): Promise<WeatherSnapshot> {
+  try {
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${coordinate[1]}&longitude=${coordinate[0]}&current=temperature_2m,weather_code&timezone=Asia/Colombo`,
+      { headers: { "User-Agent": "AI-Smart-Travel" } }
+    );
+    const data = await response.json();
+    const weatherCode: number = data.current?.weather_code || 0;
+    const temperature: number | null = data.current?.temperature_2m || null;
+
+    // WMO: 51-67 drizzle/rain, 80-82 showers, 95-99 thunderstorm
+    const isRainy =
+      (weatherCode >= 51 && weatherCode <= 67) ||
+      (weatherCode >= 80 && weatherCode <= 99);
+
+    const condition =
+      weatherCode === 0 ? "Clear" :
+      weatherCode <= 2 ? "Partly Cloudy" :
+      weatherCode === 3 ? "Overcast" :
+      weatherCode >= 45 && weatherCode <= 48 ? "Foggy" :
+      weatherCode >= 51 && weatherCode <= 67 ? "Rainy" :
+      weatherCode >= 71 && weatherCode <= 77 ? "Snowy" :
+      weatherCode >= 80 && weatherCode <= 82 ? "Rain Showers" :
+      weatherCode >= 95 ? "Thunderstorm" : "Unknown";
+
+    return { condition, temperature, isRainy };
+  } catch {
+    return { condition: "Unknown", temperature: null, isRainy: false };
   }
+}
 
-  if (wetRoad) {
-    return "medium";
-  }
-
+function deriveRiskLevel(snapshot: WeatherSnapshot): "low" | "medium" | "high" {
+  if (snapshot.isRainy) return "medium"; // Rainy → medium (orange on map)
+  const c = snapshot.condition.toLowerCase();
+  if (c.includes("fog") || c.includes("snow") || c.includes("thunder")) return "medium";
   return "low";
 }
 
-function deriveRoadStatus(riskLevel: SafetyPoint["riskLevel"]) {
-  if (riskLevel === "high") {
-    return "Possible blockage or flooded stretch";
-  }
-
-  if (riskLevel === "medium") {
-    return "Wet road, drive carefully";
-  }
-
-  return "Clear road conditions";
+function deriveRoadStatus(riskLevel: "low" | "medium" | "high"): string {
+  return riskLevel === "high" ? "Risky" : riskLevel === "medium" ? "Caution" : "Clear";
 }
 
-async function fetchWeatherSnapshot([longitude, latitude]: RouteCoordinate): Promise<WeatherSnapshot> {
-  const weatherResponse = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,precipitation,weather_code&timezone=auto`,
-    { next: { revalidate: 900 } }
+// ─── Admin Zones ──────────────────────────────────────────────────────────────
+
+function routeContainsHighRiskZone(
+  routePoints: RouteCoordinate[],
+  adminZones: AdminHighRiskZone[]
+): boolean {
+  const threshold = 0.02; // ~2km in degrees
+  return adminZones.some((zone) =>
+    routePoints.some(
+      (point) =>
+        Math.abs(point[0] - zone.coordinate[0]) < threshold &&
+        Math.abs(point[1] - zone.coordinate[1]) < threshold
+    )
   );
-
-  if (!weatherResponse.ok) {
-    throw new Error("Weather lookup failed");
-  }
-
-  const weatherData = await weatherResponse.json();
-  const current = weatherData.current ?? {};
-  const weatherCode = Number(current.weather_code ?? 0);
-  const precipitation = Number(current.precipitation ?? 0);
-  const temperature = Number(current.temperature_2m ?? 0);
-
-  return {
-    temperature,
-    precipitation,
-    weatherCode,
-    condition: describeWeatherCode(weatherCode),
-  };
 }
+
+function getHighRiskZonesNearRoute(
+  routePoints: RouteCoordinate[],
+  adminZones: AdminHighRiskZone[]
+): AdminHighRiskZone[] {
+  const threshold = 0.02;
+  return adminZones.filter((zone) =>
+    routePoints.some(
+      (point) =>
+        Math.abs(point[0] - zone.coordinate[0]) < threshold &&
+        Math.abs(point[1] - zone.coordinate[1]) < threshold
+    )
+  );
+}
+
+async function fetchAdminHighRiskZones(): Promise<AdminHighRiskZone[]> {
+  try {
+    await connectDB();
+    const zones = await RiskZone.find({ riskLevel: "High" }).lean();
+    return (zones as RiskZoneDocument[])
+      .map((zone) => ({
+        coordinate: [Number(zone?.location?.lng), Number(zone?.location?.lat)] as RouteCoordinate,
+        name: String(zone?.name ?? "High Risk Zone"),
+        description: String(zone?.description ?? "Admin marked this location as high risk."),
+      }))
+      .filter((z) => isFinite(z.coordinate[0]) && isFinite(z.coordinate[1]));
+  } catch (err) {
+    console.error("DB Error:", err);
+    return [];
+  }
+}
+
+// ─── Groq AI Summary ──────────────────────────────────────────────────────────
+
+async function analyzeRouteSummary(
+  startLocation: string,
+  destination: string,
+  travelMode: string
+): Promise<RouteSummary> {
+  try {
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "You are a travel safety expert for Sri Lanka. Respond ONLY in valid JSON.",
+        },
+        {
+          role: "user",
+          content: `Analyze safety from ${startLocation} to ${destination} via ${travelMode}. Return JSON with: riskScore (0-10 number), safetyLevel (Safe/Caution/Danger string), summary (2 sentences string), tips (array of 3 strings).`,
+        },
+      ],
+      model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" },
+    });
+
+    const parsed = JSON.parse(completion.choices[0]?.message?.content || "{}");
+    return {
+      riskScore: Number(parsed.riskScore ?? 0),
+      safetyLevel: String(parsed.safetyLevel ?? "Safe"),
+      summary: String(parsed.summary ?? "Route analysed. No major hazards detected."),
+      tips: Array.isArray(parsed.tips) ? parsed.tips : ["Drive safely."],
+    };
+  } catch {
+    return { riskScore: 0, safetyLevel: "Safe", summary: "Safe route available.", tips: ["Drive safely"] };
+  }
+}
+
+// ─── Main Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
   try {
     const { startLocation, destination, travelMode } = await req.json();
+
+    // 1. Geocode both locations
     const startGeo = await geocodeSriLankaLocation(startLocation);
     const destinationGeo = await geocodeSriLankaLocation(destination);
-    const startCoordinate = startGeo ? toCoordinate(startGeo) : null;
-    const destinationCoordinate = destinationGeo ? toCoordinate(destinationGeo) : null;
 
-    if (!startCoordinate || !destinationCoordinate) {
-      return NextResponse.json({ error: "Location lookup failed", details: "Could not resolve one or both places in Sri Lanka." }, { status: 400 });
+    if (!startGeo || !destinationGeo) {
+      return NextResponse.json({ error: "ස්ථානය සොයාගත නොහැක." }, { status: 400 });
     }
 
-    const [routeCoordinates, summary] = await Promise.all([
-      fetchRoadRoute(startCoordinate, destinationCoordinate, travelMode),
+    const startCoordinate = toCoordinate(startGeo);
+    const destinationCoordinate = toCoordinate(destinationGeo);
+
+    // 2. Parallel fetch: routes + AI summary + admin zones
+    const [routeOptions, summary, adminHighRiskZones] = await Promise.all([
+      fetchRoadRoutes(startCoordinate, destinationCoordinate, travelMode),
       analyzeRouteSummary(startLocation, destination, travelMode),
+      fetchAdminHighRiskZones(),
     ]);
 
-    const anchoredRouteCoordinates = anchorRouteEndpoints(routeCoordinates, startCoordinate, destinationCoordinate);
-    const sampledCoordinates = sampleCoordinates(anchoredRouteCoordinates);
+    // 3. Anchor start/end points on each route
+    const anchoredRoutes = routeOptions.map((route) => ({
+      ...route,
+      points: anchorRouteEndpoints(route.points, startCoordinate, destinationCoordinate),
+    }));
 
-    const routeSafetyPoints = await Promise.all(
-      sampledCoordinates.map(async (coordinate, index) => {
+    // 4. Per-route color logic
+    //    Priority: Admin High Risk → red | Rainy weather → orange | Safe → green
+    const routesWithMeta = await Promise.all(
+      anchoredRoutes.map(async (route) => {
+        // Admin zone check
+        const hasAdminRisk = routeContainsHighRiskZone(route.points, adminHighRiskZones);
+
+        // Weather check — sample 5 points along this route
+        const sampled = sampleCoordinates(route.points, 5);
+        const weatherSnaps = await Promise.all(sampled.map(fetchWeatherSnapshot));
+        const rainyCount = weatherSnaps.filter((w) => w.isRainy).length;
+        const hasRainy = rainyCount > 0;
+
+        const color: "red" | "orange" | "green" =
+          hasAdminRisk ? "red" :
+          hasRainy ? "orange" :
+          "green";
+
+        const riskReason =
+          hasAdminRisk ? "Admin Danger Zone" :
+          hasRainy ? `Rainy Weather (${rainyCount}/${sampled.length} points)` :
+          "Safe";
+
+        return { route, color, riskReason, sampled, weatherSnaps };
+      })
+    );
+
+    // 5. Pick recommended route — green first, then orange, then red; tie-break shorter distance
+    const priorityMap = { green: 0, orange: 1, red: 2 };
+    const sortedByPriority = [...routesWithMeta].sort((a, b) =>
+      priorityMap[a.color] !== priorityMap[b.color]
+        ? priorityMap[a.color] - priorityMap[b.color]
+        : a.route.distanceMeters - b.route.distanceMeters
+    );
+    const recommendedRoute = sortedByPriority[0];
+
+    const allRoutes = routesWithMeta.map((meta, i) => ({
+      points: meta.route.points,
+      color: meta.color,
+      riskReason: meta.riskReason,
+      distance: `${(meta.route.distanceMeters / 1000).toFixed(1)} km`,
+      isRecommended: meta === recommendedRoute,
+    }));
+
+    // 6. Safety points — weather checkpoints from shortest route
+    const shortestRoute = anchoredRoutes[0];
+    const shortestSampled = sampleCoordinates(shortestRoute.points, 5);
+
+    const weatherSafetyPoints: SafetyPoint[] = await Promise.all(
+      shortestSampled.map(async (coordinate, index) => {
         try {
           const snapshot = await fetchWeatherSnapshot(coordinate);
-          const riskLevel = deriveRiskLevel(snapshot);
-
+          const rLevel = deriveRiskLevel(snapshot);
           return {
             coordinate,
             label: `Checkpoint ${index + 1}`,
             condition: snapshot.condition,
-            roadStatus: deriveRoadStatus(riskLevel),
+            roadStatus: deriveRoadStatus(rLevel),
             temperature: snapshot.temperature,
-            riskLevel,
-          } satisfies SafetyPoint;
+            riskLevel: rLevel,
+            description: snapshot.isRainy
+              ? `${snapshot.condition} detected. Roads may be slippery.`
+              : `Conditions clear at this checkpoint.`,
+          } as SafetyPoint;
         } catch {
           return {
             coordinate,
-            label: `Checkpoint ${index + 1}`,
-            condition: "Weather data unavailable",
-            roadStatus: "Unable to assess road conditions",
+            label: `Point ${index + 1}`,
+            condition: "N/A",
+            roadStatus: "Clear",
             temperature: null,
-            riskLevel: "medium",
-          } satisfies SafetyPoint;
+            riskLevel: "low",
+          } as SafetyPoint;
         }
       })
     );
 
-    const blockedSegments = routeSafetyPoints.filter((point) => point.riskLevel === "high").length;
-    const rainySegments = routeSafetyPoints.filter((point) => point.riskLevel === "medium").length;
+    // 7. Admin risk zones near shortest route → high-risk safety points
+    const adminRiskPoints: SafetyPoint[] = getHighRiskZonesNearRoute(
+      shortestRoute.points,
+      adminHighRiskZones
+    ).map((zone) => ({
+      coordinate: zone.coordinate,
+      label: zone.name,
+      condition: "Admin Warning",
+      roadStatus: "අවදානම් කලාපයකි",
+      temperature: null,
+      riskLevel: "high",
+      description: zone.description,
+    }));
 
-    console.log("Road route coordinates:", anchoredRouteCoordinates);
+    const combinedSafetyPoints = [...weatherSafetyPoints, ...adminRiskPoints];
 
+    // 8. Return final response
     return NextResponse.json({
       ...summary,
-      routeCoordinates: anchoredRouteCoordinates,
-      routeSafetyPoints,
+      allRoutes,
+      routeSafetyPoints: combinedSafetyPoints,
       routeWeatherSummary: {
-        blockedSegments,
-        rainySegments,
-        sampledPoints: routeSafetyPoints.length,
+        blockedSegments: combinedSafetyPoints.filter((p) => p.riskLevel === "high").length,
+        rainySegments: weatherSafetyPoints.filter((p) => p.riskLevel === "medium").length,
+        sampledPoints: combinedSafetyPoints.length,
       },
     });
 
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: "Analysis Failed", details: errorMessage }, { status: 500 });
+  } catch (error) {
+    console.error("Route analysis error:", error);
+    return NextResponse.json({
+      error: "Analysis Failed",
+      safetyLevel: "Safe",
+      summary: "Error during calculation.",
+    }, { status: 500 });
   }
 }

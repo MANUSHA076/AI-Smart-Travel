@@ -20,8 +20,9 @@ interface AnalysisData {
   // මෙතන දැන් route එකක් වෙනුවට ලැයිස්තුවක් එන්න පුළුවන්
   allRoutes?: {
     points: [number, number][];
-    color: "red" | "green";
+    color: "red" | "green" | "orange";
     distance?: string;
+    riskReason?: string;
     isRecommended: boolean;
   }[];
   routeSafetyPoints?: {
@@ -64,11 +65,44 @@ export default function RoutesPage() {
 
       const data = await response.json();
       setAnalysis(data);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          "latestRouteAnalysis",
+          JSON.stringify({
+            ...data,
+            travelMode,
+          })
+        );
+      }
     } catch (error) {
       console.error("Error connecting to AI:", error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const routeBadge = (route: NonNullable<AnalysisData["allRoutes"]>[number]) => {
+    if (route.color === "red") {
+      return {
+        cls: "bg-red-100 text-red-700 border border-red-300",
+        icon: "⚠️",
+        label: `High Risk${route.riskReason ? ` · ${route.riskReason}` : ""}`,
+      };
+    }
+
+    if (route.color === "orange") {
+      return {
+        cls: "bg-orange-100 text-orange-700 border border-orange-300",
+        icon: "🌧️",
+        label: `Medium Risk${route.riskReason ? ` · ${route.riskReason}` : ""}`,
+      };
+    }
+
+    return {
+      cls: "bg-green-100 text-green-700 border border-green-300",
+      icon: "✅",
+      label: "Safe Route",
+    };
   };
 
   return (
@@ -130,6 +164,56 @@ export default function RoutesPage() {
               </Button>
             </CardContent>
           </Card>
+
+          {analysis?.allRoutes && analysis.allRoutes.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                Route Analysis Results
+              </h3>
+
+              {analysis.allRoutes.map((route, i) => {
+                const badge = routeBadge(route);
+                const distLabel = route.distance
+                  ? route.distance.toString().includes("km")
+                    ? route.distance
+                    : `${route.distance} km`
+                  : "N/A";
+
+                return (
+                  <div
+                    key={i}
+                    className={`p-4 rounded-xl border-2 ${
+                      route.isRecommended ? "border-primary bg-primary/5" : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl font-black text-slate-300">{i + 1}</div>
+                        <div>
+                          <p className="font-semibold text-sm">
+                            Route {i + 1}
+                            {route.isRecommended && (
+                              <span className="ml-2 text-[10px] bg-primary text-white px-1.5 py-0.5 rounded font-bold">
+                                RECOMMENDED
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap ${badge.cls}`}>
+                        {badge.icon} {badge.label}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 flex items-center gap-2 pl-11">
+                      <span className="text-sm font-semibold text-slate-700">📍 {distLabel}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {analysis && (
             <Card className="bg-primary/5 border-primary/20">
