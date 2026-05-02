@@ -109,7 +109,7 @@ export default function RiskZonesPage() {
     const end = await getCoordinates(endCity);
 
     if (start && end) {
-      // alternatives=true මගින් පාරවල් 3ක් පමණ ඉල්ලනවා
+      // alternatives=true ,request 3 roads
       const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson&alternatives=true`);
       const data = await res.json();
 
@@ -130,14 +130,14 @@ export default function RiskZonesPage() {
 
           return {
             points: coordinates,
-            color: hasRisk ? "red" : "green", // අවදානම් නම් රතු, නැත්නම් කොළ
+            color: hasRisk ? "red" : "green", 
             distance: (routeObj.distance / 1000).toFixed(2)
           };
         });
         setRoutes(analyzedRoutes);
       }
     } else {
-      alert("නගර සොයාගත නොහැක!");
+      alert(" city not found!");
     }
     setIsRouteLoading(false);
   };
@@ -146,7 +146,7 @@ export default function RiskZonesPage() {
   const handleSaveZone = async () => {
     if (!name) return alert("නගරයේ නම දෙන්න!");
     const coords = await getCoordinates(name);
-    if (!coords) return alert("නගරය සොයාගත නොහැක!");
+    if (!coords) return alert(" city not found!");
 
     const res = await fetch("/api/risk-zones", {
       method: "POST",
@@ -155,7 +155,7 @@ export default function RiskZonesPage() {
     });
 
     if (res.ok) {
-      alert(`${name} සාර්ථකව සලකුණු කළා! ✅`);
+      alert(`${name} Marked Success ✅`);
       setName("");
       setDescription("");
       fetchZones();

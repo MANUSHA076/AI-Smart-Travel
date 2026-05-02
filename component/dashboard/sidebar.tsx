@@ -1,13 +1,21 @@
 "use client"
-import { LayoutDashboard, AlertTriangle, Route, Hotel, Settings, CircleHelpIcon } from "lucide-react"
+
+import {
+  LayoutDashboard,
+  AlertTriangle,
+  Route,
+  Hotel,
+  Settings,
+  CircleHelpIcon,
+} from "lucide-react"
+
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSidebar } from "@/components/ui/sidebar"
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const sidebarStyle = {
-    background: "#F2FFF5",
-  }
+  const { open } = useSidebar()
 
   const links = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -17,46 +25,55 @@ export function AppSidebar() {
   ]
 
   return (
-    <aside
-      className="w-64 border-r border-slate-900/10 flex flex-col h-screen sticky top-0 text-slate-900"
-      style={sidebarStyle}
-    >
-<div className="p-6">
-        <h2 className="brand-logo text-xl font-bold text-slate-900 flex items-center gap-2">
-          <span>✈️</span> Safe Travel
+   <aside
+  className={`
+    fixed top-0 left-0 z-40 h-screen w-64
+    bg-[#F2FFF5] text-slate-900 border-r border-slate-900/10
+    transition-transform duration-300 ease-in-out
+
+    /* open state එක අනුව mobile සහ tablet වල පෙනුම පාලනය */
+    ${open ? "translate-x-0" : "-translate-x-full"}
+
+    /* Large screens (Desktop) වලදී හැමවිටම පෙන්වීමට */
+    lg:translate-x-0 lg:static
+  `}
+>
+      <div className="p-6">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          ✈️ Safe Travel
         </h2>
       </div>
-      
-<nav className="flex-1 px-4 space-y-2">
+
+      <nav className="flex-1 px-4 space-y-2">
         {links.map((link) => {
           const isActive =
             link.href === "/dashboard"
               ? pathname === link.href
               : pathname === link.href || pathname.startsWith(`${link.href}/`)
-          
+
           return (
             <Link
               key={link.name}
               href={link.href}
-              className={`sidebar-link flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 w-full ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
                 isActive
-                  ? "active bg-blue-300 text-black shadow-md border"
+                  ? "bg-blue-300 text-black shadow-md border border-blue-400"
                   : "text-slate-700 hover:bg-blue-200 hover:text-blue-900"
               }`}
             >
-              <link.icon className="sidebar-icon h-5 w-5 transition-transform duration-300" />
+              <link.icon className="h-5 w-5" />
               <span className="font-medium">{link.name}</span>
             </Link>
           )
         })}
       </nav>
 
-      <div className="p-4 border-t border-slate-900/10 space-y-1">
-        <button className="footer-button flex items-center gap-3 px-4 py-2 w-full text-slate-700 hover:bg-blue-200 hover:text-blue-900 rounded-lg transition-all duration-300">
-          <Settings className="h-5 w-5" /> <span>Settings</span>
+      <div className="absolute bottom-0 w-full p-4 border-t border-slate-900/10 space-y-1 bg-[#F2FFF5]">
+        <button className="flex items-center gap-3 px-4 py-2 w-full hover:bg-blue-200 rounded-lg text-slate-700 transition-colors">
+          <Settings className="h-5 w-5" /> Settings
         </button>
-        <button className="footer-button flex items-center gap-3 px-4 py-2 w-full text-slate-700 hover:bg-blue-200 hover:text-blue-900 rounded-lg transition-all duration-300">
-          <CircleHelpIcon className="h-5 w-5" /> <span>Help</span>
+        <button className="flex items-center gap-3 px-4 py-2 w-full hover:bg-blue-200 rounded-lg text-slate-700 transition-colors">
+          <CircleHelpIcon className="h-5 w-5" /> Help
         </button>
       </div>
     </aside>

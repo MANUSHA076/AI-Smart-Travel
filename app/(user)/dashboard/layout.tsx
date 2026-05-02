@@ -1,6 +1,47 @@
-import { SidebarProvider } from "@/components/ui/sidebar"
+"use client"
+
+import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/component/dashboard/sidebar"
 import DashboardNavbar from "@/component/dashboard-navbar"
+
+function LayoutContent({ children }: { children: React.ReactNode }) {
+  const { open, setOpen } = useSidebar()
+
+  return (
+    <div className="flex min-h-screen w-full bg-background">
+      
+      {/* SIDEBAR */}
+      <AppSidebar />
+
+      {/* MOBILE OVERLAY - Sidebar එක විවෘතව ඇති විට පිටුපස අඳුරු කිරීමට */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* MAIN CONTENT AREA */}
+      <div
+        className="
+          flex flex-col flex-1 w-full transition-all duration-300
+          /* lg screen වලදී Sidebar එක static නිසා ඒ සඳහා ඉඩ තැබිය යුතුයි */
+          lg:ml-64
+        "
+      >
+        {/* NAVBAR */}
+        <DashboardNavbar />
+
+        {/* PAGE CONTENT */}
+        <main className="flex-1 p-4 md:p-6 bg-muted/40 w-full overflow-x-hidden">
+          <div className="max-w-7xl mx-auto w-full">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
+  )
+}
 
 export default function DashboardLayout({
   children,
@@ -8,29 +49,8 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <SidebarProvider>
-      {/* Container eka mulu screen ekama cover karaganna 'w-full' danna */}
-      <div className="flex min-h-screen w-full">
-
-        {/* Sidebar */}
-        <AppSidebar />
-
-        {/* Navbar saha Content ekata 'w-full' danna width eka hari yanna */}
-        <div className="flex flex-col flex-1 w-full">
-          
-          <DashboardNavbar />
-
-          {/* Page Content */}
-          {/* Layout eka center karanna nam 'mx-auto' danna puluwan, 
-              namuth dashbaord ekakata 'w-full' thama godak welawata hariyanne */}
-          <main className="flex-1 p-6 bg-muted/40 w-full overflow-x-hidden">
-            <div className="max-w-7xl mx-auto w-full"> 
-               {children}
-            </div>
-          </main>
-          
-        </div>
-      </div>
+    <SidebarProvider defaultOpen={false}>
+      <LayoutContent>{children}</LayoutContent>
     </SidebarProvider>
   )
 }
