@@ -123,7 +123,7 @@ export default function RoutesPage() {
             analysis.riskScore > 5 ? "border-red-500 bg-red-50 text-red-700" : "border-green-500 bg-green-50 text-green-700"
           }`}>
             {analysis.riskScore > 5 ? <AlertTriangle /> : <CheckCircle2 />}
-            {analysis.safetyLevel.toUpperCase()} STATUS
+            {(analysis.safetyLevel ?? "UNKNOWN").toUpperCase()} STATUS
           </div>
         )}
       </div>
@@ -280,7 +280,7 @@ export default function RoutesPage() {
                           <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             point.riskLevel === 'high' ? 'bg-red-100 text-red-600' : point.riskLevel === 'medium' ? 'bg-orange-100 text-orange-600' : 'bg-yellow-100 text-yellow-700'
                           }`}>
-                            {point.riskLevel.toUpperCase()}
+                            {(point.riskLevel ?? '').toUpperCase()}
                           </div>
                        </div>
                        <p className="text-[11px] mt-2 text-slate-600">{point.description}</p>

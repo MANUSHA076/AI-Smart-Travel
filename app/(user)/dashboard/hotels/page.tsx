@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import HotelDetailModal from "@/components/HotelDetailModal"
 import {
   MapPin, Star, Search, SlidersHorizontal,
-  X, ChevronDown, CheckCircle2, ShieldCheck, Cpu,
-  ImagePlus
+  X, ChevronDown, CheckCircle2, ShieldCheck, Cpu
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -77,7 +76,6 @@ function HotelCard({
         className="group relative overflow-hidden rounded-2xl border-0 bg-white shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
         onClick={() => setModalOpen(true)}
       >
-        {/* Image */}
         <div className="relative h-52 w-full overflow-hidden bg-slate-100">
           {!imgErr ? (
             <Image
@@ -92,16 +90,13 @@ function HotelCard({
               <ShieldCheck className="w-8 h-8 text-slate-300" />
             </div>
           )}
-          {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-          {/* Risk badge on image */}
           <div className="absolute top-3 left-3">
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm bg-white/90 border ${cfg.pill.split(" ").slice(1).join(" ")}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
               {cfg.label}
             </span>
           </div>
-          {/* Rating badge */}
           <div className="absolute top-3 right-3">
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full bg-white/90 backdrop-blur-sm text-slate-800">
               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
@@ -110,7 +105,6 @@ function HotelCard({
           </div>
         </div>
 
-        {/* Content */}
         <CardContent className="p-4">
           <h3 className="text-[15px] font-semibold text-slate-900 leading-tight mb-1 truncate">
             {hotel.name}
@@ -163,7 +157,16 @@ export default function HotelsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [showFilters, setShowFilters] = useState(false)
 
-  // Derived: filtered + sorted hotels
+  // හසුරුවන්නා: බුකින් එකක් සාර්ථක වූ විට පණිවිඩය පෙන්වා තත්පර 5කින් ඉවත් කිරීම
+  const handleBookSuccess = (b: Booking) => {
+    setBookings(prev => [...prev, b]);
+    
+    // තත්පර 5කට පසුව එම බුකින් පණිවිඩය ඉවත් කරයි
+    setTimeout(() => {
+      setBookings(prev => prev.filter(item => item !== b));
+    }, 5000);
+  }
+
   const filtered = useMemo(() => {
     let result = hotels.filter(h => {
       const matchSearch = h.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -178,21 +181,18 @@ export default function HotelsPage() {
     return result
   }, [hotels, search, riskFilter, maxPrice, sort])
 
-  const handleBookSuccess = (b: Booking) => setBookings(prev => [...prev, b])
-
   const RISK_FILTERS: RiskFilter[] = ["All", "Low", "Medium", "High"]
 
   return (
     <div className="min-h-screen bg-[#F7F6F3]">
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      {/* Hero Section */}
       <section className="relative h-[62vh] flex items-end overflow-hidden bg-slate-900">
         <img
           src="/hero6.jpg"
           alt="hero"
           className="absolute inset-0 w-full h-full object-cover opacity-50"
         />
-        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pb-16">
@@ -213,7 +213,6 @@ export default function HotelsPage() {
             </p>
           </motion.div>
 
-          {/* Inline search bar in hero */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -239,12 +238,9 @@ export default function HotelsPage() {
         </div>
       </section>
 
-      {/* ── Hotels Section ───────────────────────────────────────────────── */}
       <section id="hotels-section" className="max-w-7xl mx-auto px-6 pt-12 pb-24">
 
-        {/* Toolbar */}
         <div className="flex flex-col gap-4 mb-8">
-          {/* Top row */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
@@ -253,7 +249,6 @@ export default function HotelsPage() {
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Signature Hotels</h2>
             </div>
             <div className="flex items-center gap-2">
-              {/* Sort */}
               <div className="relative">
                 <select
                   className="appearance-none pl-4 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 outline-none cursor-pointer hover:border-slate-300 transition-colors"
@@ -268,7 +263,6 @@ export default function HotelsPage() {
                 <ChevronDown className="absolute right-2.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
 
-              {/* Filters toggle */}
               <button
                 onClick={() => setShowFilters(v => !v)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${showFilters ? "bg-slate-900 text-white border-slate-900" : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"}`}
@@ -279,7 +273,6 @@ export default function HotelsPage() {
             </div>
           </div>
 
-          {/* Expandable filters */}
           <AnimatePresence>
             {showFilters && (
               <motion.div
@@ -290,7 +283,6 @@ export default function HotelsPage() {
                 className="overflow-hidden"
               >
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-5">
-                  {/* Risk filter pills */}
                   <div>
                     <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Risk level</p>
                     <div className="flex gap-2 flex-wrap">
@@ -312,7 +304,6 @@ export default function HotelsPage() {
 
                   <div className="h-px w-full sm:h-12 sm:w-px bg-slate-100" />
 
-                  {/* Price slider */}
                   <div className="flex-1 min-w-[180px]">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Max price / night</p>
@@ -329,7 +320,6 @@ export default function HotelsPage() {
                     />
                   </div>
 
-                  {/* Active filter badges */}
                   {(riskFilter !== "All" || maxPrice < 300) && (
                     <>
                       <div className="h-px w-full sm:h-12 sm:w-px bg-slate-100" />
@@ -362,12 +352,9 @@ export default function HotelsPage() {
           </AnimatePresence>
         </div>
 
-        {/* ── Grid ── */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
-              <Search className="w-6 h-6 text-slate-300" />
-            </div>
+            <Search className="w-12 h-12 text-slate-200" />
             <div className="text-center">
               <p className="text-base font-semibold text-slate-700">No hotels found</p>
               <p className="text-sm text-slate-400 mt-1">Try adjusting your search or filters</p>
@@ -403,7 +390,7 @@ export default function HotelsPage() {
           </div>
         )}
 
-        {/* Bookings summary bar */}
+        {/* Bookings Summary Bar with Auto-Hide Logic */}
         <AnimatePresence>
           {bookings.length > 0 && (
             <motion.div
@@ -425,8 +412,6 @@ export default function HotelsPage() {
           )}
         </AnimatePresence>
       </section>
-
-     
     </div>
   )
 }

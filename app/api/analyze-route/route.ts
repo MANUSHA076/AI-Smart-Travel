@@ -91,8 +91,6 @@ async function geocodeSriLankaLocation(locationName: string): Promise<GeoLocatio
 }
 
 // ─── OSRM — Guaranteed 2 routes ───────────────────────────────────────────────
-// Colombo→Kandy: alternatives=true directly gives 2
-// Galle→Matara:  midpoint waypoint fallback creates 2nd route
 
 async function fetchRoadRoutes(
   start: RouteCoordinate,
@@ -102,7 +100,6 @@ async function fetchRoadRoutes(
   try {
     const mode = travelMode.toLowerCase() === "walking" ? "foot" : "driving";
 
-    // Call 1: direct + alternatives
     const res1 = await fetch(
       `https://router.project-osrm.org/route/v1/${mode}/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=geojson&alternatives=true`,
       { headers: { "User-Agent": "AI-Smart-Travel" } }
@@ -115,7 +112,6 @@ async function fetchRoadRoutes(
 
     if (directRoutes.length >= 2) return directRoutes.slice(0, 2);
 
-    // Call 2: midpoint waypoint fallback
     const midLng = (start[0] + end[0]) / 2;
     const midLat = (start[1] + end[1]) / 2;
     const res2 = await fetch(
@@ -166,10 +162,7 @@ async function fetchWeatherSnapshot(coordinate: RouteCoordinate): Promise<Weathe
     const weatherCode: number = data.current?.weather_code || 0;
     const temperature: number | null = data.current?.temperature_2m || null;
 
-    // WMO: 51-67 drizzle/rain, 80-82 showers, 95-99 thunderstorm
-    const isRainy =
-      (weatherCode >= 51 && weatherCode <= 67) ||
-      (weatherCode >= 80 && weatherCode <= 99);
+    const isRainy = (weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 99);
 
     const condition =
       weatherCode === 0 ? "Clear" :
@@ -188,7 +181,7 @@ async function fetchWeatherSnapshot(coordinate: RouteCoordinate): Promise<Weathe
 }
 
 function deriveRiskLevel(snapshot: WeatherSnapshot): "low" | "medium" | "high" {
-  if (snapshot.isRainy) return "medium"; // Rainy → medium (orange on map)
+  if (snapshot.isRainy) return "medium";
   const c = snapshot.condition.toLowerCase();
   if (c.includes("fog") || c.includes("snow") || c.includes("thunder")) return "medium";
   return "low";
@@ -204,12 +197,11 @@ function routeContainsHighRiskZone(
   routePoints: RouteCoordinate[],
   adminZones: AdminHighRiskZone[]
 ): boolean {
-  const threshold = 0.02; // ~2km in degrees
+  const threshold = 0.02;
   return adminZones.some((zone) =>
-    routePoints.some(
-      (point) =>
-        Math.abs(point[0] - zone.coordinate[0]) < threshold &&
-        Math.abs(point[1] - zone.coordinate[1]) < threshold
+    routePoints.some((point) =>
+      Math.abs(point[0] - zone.coordinate[0]) < threshold &&
+      Math.abs(point[1] - zone.coordinate[1]) < threshold
     )
   );
 }
@@ -220,10 +212,9 @@ function getHighRiskZonesNearRoute(
 ): AdminHighRiskZone[] {
   const threshold = 0.02;
   return adminZones.filter((zone) =>
-    routePoints.some(
-      (point) =>
-        Math.abs(point[0] - zone.coordinate[0]) < threshold &&
-        Math.abs(point[1] - zone.coordinate[1]) < threshold
+    routePoints.some((point) =>
+      Math.abs(point[0] - zone.coordinate[0]) < threshold &&
+      Math.abs(point[1] - zone.coordinate[1]) < threshold
     )
   );
 }
@@ -255,14 +246,8 @@ async function analyzeRouteSummary(
   try {
     const completion = await groq.chat.completions.create({
       messages: [
-        {
-          role: "system",
-          content: "You are a travel safety expert for Sri Lanka. Respond ONLY in valid JSON.",
-        },
-        {
-          role: "user",
-          content: `Analyze safety from ${startLocation} to ${destination} via ${travelMode}. Return JSON with: riskScore (0-10 number), safetyLevel (Safe/Caution/Danger string), summary (2 sentences string), tips (array of 3 strings).`,
-        },
+        { role: "system", content: "You are a travel safety expert for Sri Lanka. Respond ONLY in valid JSON." },
+        { role: "user", content: `Analyze safety from ${startLocation} to ${destination} via ${travelMode}. Return JSON with: riskScore (0-10 number), safetyLevel (Safe/Caution/Danger string), summary (2 sentences string), tips (array of 3 strings).` },
       ],
       model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" },
@@ -286,7 +271,6 @@ export async function POST(req: Request) {
   try {
     const { startLocation, destination, travelMode } = await req.json();
 
-    // 1. Geocode both locations
     const startGeo = await geocodeSriLankaLocation(startLocation);
     const destinationGeo = await geocodeSriLankaLocation(destination);
 
@@ -297,47 +281,32 @@ export async function POST(req: Request) {
     const startCoordinate = toCoordinate(startGeo);
     const destinationCoordinate = toCoordinate(destinationGeo);
 
-    // 2. Parallel fetch: routes + AI summary + admin zones
     const [routeOptions, summary, adminHighRiskZones] = await Promise.all([
       fetchRoadRoutes(startCoordinate, destinationCoordinate, travelMode),
       analyzeRouteSummary(startLocation, destination, travelMode),
       fetchAdminHighRiskZones(),
     ]);
 
-    // 3. Anchor start/end points on each route
     const anchoredRoutes = routeOptions.map((route) => ({
       ...route,
       points: anchorRouteEndpoints(route.points, startCoordinate, destinationCoordinate),
     }));
 
-    // 4. Per-route color logic
-    //    Priority: Admin High Risk → red | Rainy weather → orange | Safe → green
     const routesWithMeta = await Promise.all(
       anchoredRoutes.map(async (route) => {
-        // Admin zone check
         const hasAdminRisk = routeContainsHighRiskZone(route.points, adminHighRiskZones);
-
-        // Weather check — sample 5 points along this route
         const sampled = sampleCoordinates(route.points, 5);
         const weatherSnaps = await Promise.all(sampled.map(fetchWeatherSnapshot));
         const rainyCount = weatherSnaps.filter((w) => w.isRainy).length;
         const hasRainy = rainyCount > 0;
 
-        const color: "red" | "orange" | "green" =
-          hasAdminRisk ? "red" :
-          hasRainy ? "orange" :
-          "green";
-
-        const riskReason =
-          hasAdminRisk ? "Admin Danger Zone" :
-          hasRainy ? `Rainy Weather (${rainyCount}/${sampled.length} points)` :
-          "Safe";
+        const color: "red" | "orange" | "green" = hasAdminRisk ? "red" : hasRainy ? "orange" : "green";
+        const riskReason = hasAdminRisk ? "Admin Danger Zone" : hasRainy ? `Rainy Weather (${rainyCount}/${sampled.length} points)` : "Safe";
 
         return { route, color, riskReason, sampled, weatherSnaps };
       })
     );
 
-    // 5. Pick recommended route — green first, then orange, then red; tie-break shorter distance
     const priorityMap = { green: 0, orange: 1, red: 2 };
     const sortedByPriority = [...routesWithMeta].sort((a, b) =>
       priorityMap[a.color] !== priorityMap[b.color]
@@ -354,63 +323,52 @@ export async function POST(req: Request) {
       isRecommended: meta === recommendedRoute,
     }));
 
-    // 6. Safety points — weather checkpoints from shortest route
-    const shortestRoute = anchoredRoutes[0];
-    const shortestSampled = sampleCoordinates(shortestRoute.points, 5);
+    // ─── දෙවැනි මාර්ගයේ සහ පළමු මාර්ගයේ Flags එකතු කිරීම ───────────────────
+    let combinedSafetyPoints: SafetyPoint[] = [];
 
-    const weatherSafetyPoints: SafetyPoint[] = await Promise.all(
-      shortestSampled.map(async (coordinate, index) => {
-        try {
-          const snapshot = await fetchWeatherSnapshot(coordinate);
-          const rLevel = deriveRiskLevel(snapshot);
+    for (let i = 0; i < Math.min(anchoredRoutes.length, 2); i++) {
+      const currentRoute = anchoredRoutes[i];
+      const routeLabel = i === 0 ? "Route 1" : "Route 2";
+
+      // 1. Weather Points for this route
+      const sampled = sampleCoordinates(currentRoute.points, 4);
+      const weatherPoints = await Promise.all(
+        sampled.map(async (coord, idx) => {
+          const snap = await fetchWeatherSnapshot(coord);
+          const rLevel = deriveRiskLevel(snap);
           return {
-            coordinate,
-            label: `Checkpoint ${index + 1}`,
-            condition: snapshot.condition,
+            coordinate: coord,
+            label: `${routeLabel} - Checkpoint ${idx + 1}`,
+            condition: snap.condition,
             roadStatus: deriveRoadStatus(rLevel),
-            temperature: snapshot.temperature,
+            temperature: snap.temperature,
             riskLevel: rLevel,
-            description: snapshot.isRainy
-              ? `${snapshot.condition} detected. Roads may be slippery.`
-              : `Conditions clear at this checkpoint.`,
+            description: `${snap.condition} detected on ${routeLabel}.`
           } as SafetyPoint;
-        } catch {
-          return {
-            coordinate,
-            label: `Point ${index + 1}`,
-            condition: "N/A",
-            roadStatus: "Clear",
-            temperature: null,
-            riskLevel: "low",
-          } as SafetyPoint;
-        }
-      })
-    );
+        })
+      );
 
-    // 7. Admin risk zones near shortest route → high-risk safety points
-    const adminRiskPoints: SafetyPoint[] = getHighRiskZonesNearRoute(
-      shortestRoute.points,
-      adminHighRiskZones
-    ).map((zone) => ({
-      coordinate: zone.coordinate,
-      label: zone.name,
-      condition: "Admin Warning",
-      roadStatus: "අවදානම් කලාපයකි",
-      temperature: null,
-      riskLevel: "high",
-      description: zone.description,
-    }));
+      // 2. Admin Points for this route
+      const adminPoints = getHighRiskZonesNearRoute(currentRoute.points, adminHighRiskZones).map(zone => ({
+        coordinate: zone.coordinate,
+        label: `${zone.name} (${routeLabel})`,
+        condition: "Admin Warning",
+        roadStatus: "අවදානම් කලාපයකි",
+        temperature: null,
+        riskLevel: "high",
+        description: zone.description,
+      } as SafetyPoint));
 
-    const combinedSafetyPoints = [...weatherSafetyPoints, ...adminRiskPoints];
+      combinedSafetyPoints = [...combinedSafetyPoints, ...weatherPoints, ...adminPoints];
+    }
 
-    // 8. Return final response
     return NextResponse.json({
       ...summary,
       allRoutes,
       routeSafetyPoints: combinedSafetyPoints,
       routeWeatherSummary: {
         blockedSegments: combinedSafetyPoints.filter((p) => p.riskLevel === "high").length,
-        rainySegments: weatherSafetyPoints.filter((p) => p.riskLevel === "medium").length,
+        rainySegments: combinedSafetyPoints.filter((p) => p.riskLevel === "medium").length,
         sampledPoints: combinedSafetyPoints.length,
       },
     });
