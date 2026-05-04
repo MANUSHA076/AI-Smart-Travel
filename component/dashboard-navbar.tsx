@@ -35,20 +35,16 @@ import {
   Settings,
   LogOut,
 } from "lucide-react"
-declare global {
-  interface Window {
-    setSidebarOpen?: (open: boolean) => void
-  }
-}
+
 export default function DashboardNavbar() {
   const [logoutOpen, setLogoutOpen] = useState(false)
   const { toggleSidebar, setOpen } = useSidebar()
   const router = useRouter()
 
   useEffect(() => {
-    window.setSidebarOpen = (v: boolean) => setOpen(Boolean(v))
+    ;(window as any).setSidebarOpen = (v: boolean) => setOpen(Boolean(v))
     return () => {
-      delete window.setSidebarOpen
+      try { delete (window as any).setSidebarOpen } catch { (window as any).setSidebarOpen = undefined }
     }
   }, [setOpen])
 
@@ -76,12 +72,13 @@ export default function DashboardNavbar() {
 
   return (
     <>
-      <header className="flex items-center justify-between px-6 py-4 border-b bg-background sticky top-0 z-20">
+      <header className="flex items-center justify-between px-6 py-4 border-b bg-[#F2FFF5] sticky top-0 z-20">
         <div className="flex items-center gap-3">
           {/* Mobile & Tablet toggle button */}
-          <Button variant="ghost" size="icon" onClick={() => toggleSidebar()} >
+          <Button variant="ghost" size="icon" onClick={() => toggleSidebar()} className="lg:hidden">
             <Menu className="h-5 w-5" />
           </Button>
+         
         </div>
 
         <div className="flex items-center gap-4">

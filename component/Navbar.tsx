@@ -5,7 +5,7 @@ import Link from "next/link"
 
 export default function Navbar() {
   return (
-     <nav className="flex justify-between items-center p-4  bg-white text-primary px-6 py-4 border-b border-gray-200 shadow-md">
+    <nav className="flex justify-between items-center p-4 bg-[#F2FFF5] text-primary px-6 py-4 border-b border-gray-200 shadow-md">
         <div className="flex items-center gap-2">
           <Plane className="h-5 w-5" />
            <span className="font-bold text-lg">SmartTravel</span>

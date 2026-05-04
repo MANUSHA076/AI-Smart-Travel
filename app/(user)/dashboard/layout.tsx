@@ -1,8 +1,8 @@
 "use client"
 
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/component/dashboard/sidebar"
-import DashboardNavbar from "@/component/dashboard-navbar"
+import { AppSidebar } from "@/component/dashboard/sidebar" // Import path නිවැරදි කරගන්න
+import DashboardNavbar from "@/component/dashboard-navbar" // Import path නිවැරදි කරගන්න
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { open, setOpen } = useSidebar()
@@ -23,11 +23,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
       {/* MAIN CONTENT AREA */}
       <div
-        className="
-          flex flex-col flex-1 w-full transition-all duration-300
-          /* lg screen වලදී Sidebar එක static නිසා ඒ සඳහා ඉඩ තැබිය යුතුයි */
-          lg:ml-64
-        "
+        className="flex flex-col flex-1 w-full transition-all duration-300 lg:ml-64"
       >
         {/* NAVBAR */}
         <DashboardNavbar />

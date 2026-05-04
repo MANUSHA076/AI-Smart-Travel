@@ -3,7 +3,7 @@ import { Bell, Search } from "lucide-react"
 
 export function AdminNavbar() {
   return (
-    <header className="h-16 border-b bg-white px-8 flex items-center justify-between sticky top-0 z-20">
+    <header className="h-16 border-b bg-[#F2FFF5] px-8 flex items-center justify-between sticky top-0 z-20">
       <h3 className="font-semibold text-slate-800 text-lg">Admin Control Panel</h3>
       
       <div className="flex items-center gap-6">
