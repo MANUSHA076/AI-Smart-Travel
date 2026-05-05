@@ -323,7 +323,7 @@ export async function POST(req: Request) {
       isRecommended: meta === recommendedRoute,
     }));
 
-    // ─── දෙවැනි මාර්ගයේ සහ පළමු මාර්ගයේ Flags එකතු කිරීම ───────────────────
+    // ─── Add flags for the first and second routes ───────────────────
     let combinedSafetyPoints: SafetyPoint[] = [];
 
     for (let i = 0; i < Math.min(anchoredRoutes.length, 2); i++) {

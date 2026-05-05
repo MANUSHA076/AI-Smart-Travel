@@ -3,7 +3,7 @@
 import { StatsOverview } from '@/components/admin/StatsOverview'
 
 export default function AdminDashboard() {
-  // මෙතන දැන් සරලයි. Layout එක දැනටමත් Sidebar එක පෙන්වනවා.
+  // Simple now — layout already includes the Sidebar.
   return (
     <div className="space-y-6">
       <StatsOverview />

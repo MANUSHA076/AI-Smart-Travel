@@ -157,11 +157,11 @@ export default function HotelsPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [showFilters, setShowFilters] = useState(false)
 
-  // හසුරුවන්නා: බුකින් එකක් සාර්ථක වූ විට පණිවිඩය පෙන්වා තත්පර 5කින් ඉවත් කිරීම
+  // Handler: show booking success message and remove after 5 seconds
   const handleBookSuccess = (b: Booking) => {
     setBookings(prev => [...prev, b]);
     
-    // තත්පර 5කට පසුව එම බුකින් පණිවිඩය ඉවත් කරයි
+    // Remove that booking message after 5 seconds
     setTimeout(() => {
       setBookings(prev => prev.filter(item => item !== b));
     }, 5000);

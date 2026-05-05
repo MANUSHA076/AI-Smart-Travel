@@ -39,7 +39,7 @@ export default function RiskZonesPage() {
   const [description, setDescription] = useState("")
   const [startCity, setStartCity] = useState("")
   const [endCity, setEndCity] = useState("")
-  const [routes, setRoutes] = useState<RouteSummary[]>([]) // පාරවල් කිහිපයක් තබා ගැනීමට
+  const [routes, setRoutes] = useState<RouteSummary[]>([]) // To store multiple routes
   const [isRouteLoading, setIsRouteLoading] = useState(false)
   const [savedZones, setSavedZones] = useState<RiskZone[]>([])
 
@@ -50,7 +50,7 @@ export default function RiskZonesPage() {
     description: zone.description,
   }))
 
-  // 1. Database එකෙන් දත්ත ගේන Function එක
+  // 1. Function to fetch data from the database
   const fetchZones = async () => {
     try {
       const res = await fetch("/api/risk-zones");
@@ -78,7 +78,7 @@ export default function RiskZonesPage() {
     };
   }, []);
 
-  // 2. නගරයේ නම අනුව Coordinates (lat/lng) සොයන Function එක
+  // 2. Function to find coordinates (lat/lng) by city name
   const getCoordinates = async (cityName: string) => {
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${cityName}`);
@@ -89,7 +89,7 @@ export default function RiskZonesPage() {
     }
   };
 
-  // 3. දුර මැනීම සඳහා Haversine Formula එක (KM වලින්)
+  // 3. Haversine formula for distance calculation (in KM)
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -100,9 +100,9 @@ export default function RiskZonesPage() {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
-  // 4. පාරවල් 3ක් සොයා ඒවායේ ආරක්ෂාව පරීක්ෂා කරන Function එක
+  // 4. Function that finds 3 routes and checks their safety
   const handleFindRoute = async () => {
-    if (!startCity || !endCity) return alert("කරුණාකර නගර ඇතුළත් කරන්න!");
+    if (!startCity || !endCity) return alert("please enter city names!");
     setIsRouteLoading(true);
 
     const start = await getCoordinates(startCity);
@@ -117,7 +117,7 @@ export default function RiskZonesPage() {
         const analyzedRoutes: RouteSummary[] = data.routes.map((routeObj: OsrmRoute) => {
           const coordinates = routeObj.geometry.coordinates;
           
-          // පාරේ ඕනෑම තැනක් High Risk Zone එකකට 1.5km ට වඩා ළඟදැයි බැලීම
+          // Check whether any point on the route is within 1.5km of a High Risk Zone
           const hasRisk = coordinates.some((point: [number, number]) => 
             savedZones.some((zone) => {
               if (zone.riskLevel === "High") {
@@ -142,9 +142,9 @@ export default function RiskZonesPage() {
     setIsRouteLoading(false);
   };
 
-  // 5. Risk Zone එක සේව් කරන Function එක
+  // 5. Function to save a Risk Zone
   const handleSaveZone = async () => {
-    if (!name) return alert("නගරයේ නම දෙන්න!");
+    if (!name) return alert("please enter a city name!");
     const coords = await getCoordinates(name);
     if (!coords) return alert(" city not found!");
 
@@ -169,8 +169,8 @@ export default function RiskZonesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Map Section */}
         <div className="lg:col-span-2 bg-white p-2 rounded-xl shadow-md border">
-          <MapWithNoSSR 
-            multiRoutes={routes} // Array එකක් යවනවා
+            <MapWithNoSSR 
+            multiRoutes={routes} // Passing an array
             height="650px" 
             safetyPoints={safetyPoints}
           />
@@ -190,7 +190,7 @@ export default function RiskZonesPage() {
             <textarea
               value={description}
               onChange={(e)=>setDescription(e.target.value)}
-              placeholder="What happened? e.g. Aliyo panala / Ganwathura / Landslide"
+              placeholder="What happened? e.g. elephant crossing/ Floods/ Landslide"
               className="w-full p-2 border rounded mb-3 min-h-20"
             />
             <button onClick={handleSaveZone} className="w-full bg-red-600 text-white py-2 rounded font-bold hover:bg-red-700">💾 SAVE ZONE</button>

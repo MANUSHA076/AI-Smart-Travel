@@ -1,8 +1,8 @@
 "use client"
 
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/component/dashboard/sidebar" // Import path නිවැරදි කරගන්න
-import DashboardNavbar from "@/component/dashboard-navbar" // Import path නිවැරදි කරගන්න
+import { AppSidebar } from "@/component/dashboard/sidebar" // Ensure the import path is correct
+import DashboardNavbar from "@/component/dashboard-navbar" // Ensure the import path is correct
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const { open, setOpen } = useSidebar()
@@ -13,7 +13,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       {/* SIDEBAR */}
       <AppSidebar />
 
-      {/* MOBILE OVERLAY - Sidebar එක විවෘතව ඇති විට පිටුපස අඳුරු කිරීමට */}
+      {/* MOBILE OVERLAY - dim the background when the Sidebar is open */}
       {open && (
         <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"

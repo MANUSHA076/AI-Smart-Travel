@@ -24,9 +24,9 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     await connectDB();
-    const body = await request.json(); // Frontend එකෙන් එවපු data ටික මෙතනට එනවා
+    const body = await request.json(); // The data sent from the frontend arrives here
     
-    const newZone = await RiskZone.create(body); // Database එකේ අලුත් record එකක් හදනවා
+    const newZone = await RiskZone.create(body); // Creating a new record in the database
     return NextResponse.json(newZone, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed to create" }, { status: 400 });

@@ -16,7 +16,7 @@ import { motion } from "framer-motion";
 export default function LoginPage() {
   const router = useRouter()
 
-  // 1. Login එකට අවශ්‍ය වෙන්නේ Email සහ Password විතරයි
+  // 1. For login we only need Email and Password
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -27,7 +27,7 @@ export default function LoginPage() {
   e.preventDefault();
   setIsLoading(true);
 
-  // 1. කලින් විදිහටම Login වෙනවා
+  // 1. Perform login as usual
   const { error } = await authClient.signIn.email({
     email: formData.email,
     password: formData.password,
@@ -36,10 +36,10 @@ export default function LoginPage() {
   if (error) {
     alert(error.message);
   } else {
-    // 2. දැනට ලොග් වුණු user ගේ session එක ගන්නවා
+    // 2. Get the session of the currently logged-in user
     const { data: session } = await authClient.getSession();
     
-    // 3. Role එක අනුව Redirect කරනවා
+    // 3. Redirect based on role
     const role = (session?.user as { role?: string } | undefined)?.role;
 
     if (role === "admin") {
@@ -59,7 +59,7 @@ export default function LoginPage() {
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_15%,rgba(59,130,246,0.18),transparent_36%),radial-gradient(circle_at_85%_78%,rgba(14,165,233,0.14),transparent_34%)]" />
       
-      {/* පටු card එකක් (max-w-sm) භාවිතා කරමු */}
+      {/* Use a compact card (max-w-sm) */}
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}

@@ -56,7 +56,7 @@ export default function SignupPage() {
 
 
   return (
-    // min-h-screen එකෙන් මුළු පිටුවේම මැදට ගන්නවා
+    // Centers the entire page using min-h-screen
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -65,7 +65,7 @@ export default function SignupPage() {
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_85%_80%,rgba(59,130,246,0.12),transparent_35%)]" />
 
-      {/* max-w-sm දැම්මා Card එක තවත් ටිකක් පොඩි වෙන්න */}
+      {/* Set max-w-sm so the Card is a bit smaller */}
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -104,7 +104,7 @@ export default function SignupPage() {
               <Input 
                 id="name" 
                 placeholder="Manusha" 
-                className="h-9 text-sm" // උස පෝඩ්ඩක් අඩු කළා
+                className="h-9 text-sm" // Slightly reduced height
                 required 
                 value={formData.name}
                 onChange={(e) => setFormData({...formData, name: e.target.value})}

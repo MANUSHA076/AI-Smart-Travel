@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
 type Hotel = {
@@ -160,6 +160,7 @@ export default function HotelDetailModal({
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg p-0 overflow-hidden rounded-2xl">
+        <DialogTitle className="sr-only">{hotel.name}</DialogTitle>
         {booked ? (
           <div className="flex flex-col items-center justify-center gap-5 py-16 px-8 text-center">
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl">✓</div>

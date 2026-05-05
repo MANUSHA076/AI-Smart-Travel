@@ -10,14 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import RoutePreviewMap from "@/components/ReusableMap";
 
-// පාරවල් කිහිපයක් සඳහා Interface එක Update කළා
+// Updated interface to support multiple routes
 interface AnalysisData {
   riskScore: number;
   safetyLevel: string;
   safeCity: string;
   summary: string;
   tips: string[];
-  // මෙතන දැන් route එකක් වෙනුවට ලැයිස්තුවක් එන්න පුළුවන්
+  // Now a list of routes can be provided instead of a single route
   allRoutes?: {
     points: [number, number][];
     color: "red" | "green" | "orange";
@@ -32,7 +32,7 @@ interface AnalysisData {
     roadStatus: string;
     temperature: number | null;
     riskLevel: "low" | "medium" | "high";
-    description?: string; // අපි අලුතින් එකතු කරපු විස්තරය
+    description?: string; // Newly added description field
   }[];
   routeWeatherSummary?: {
     blockedSegments: number;
@@ -245,7 +245,7 @@ export default function RoutesPage() {
             </div>
             <CardContent className="p-0 relative">
               <RoutePreviewMap 
-                // මෙතනදී Backend එකෙන් එන allRoutes array එකම දෙනවා
+                // Here we directly provide the allRoutes array coming from the backend
                 multiRoutes={analysis?.allRoutes || []}
                 safetyPoints={analysis?.routeSafetyPoints || []}
                 travelMode={travelMode}

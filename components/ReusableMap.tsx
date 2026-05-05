@@ -122,7 +122,7 @@ export default function ReusableMap({
     safetyPoints.forEach((point) => {
       const markerElement = document.createElement('div');
       
-      // පාට තීරණය කිරීම
+      // Determine color
       const riskColor = 
         point.riskLevel === 'high' ? 'bg-red-600' : 
         point.riskLevel === 'medium' ? 'bg-orange-500' : 'bg-emerald-500';
@@ -140,7 +140,7 @@ export default function ReusableMap({
         </svg>
       `;
 
-      // Marker එකට ලඟින් යන routes හොයනවා (1.5km radius)
+      // Find routes near the marker (1.5km radius)
       const affectedRouteNumbers = multiRoutes
         .map((route, index) => {
           const touchesRoute = route.points.some(([lng, lat]) => {
@@ -163,7 +163,7 @@ export default function ReusableMap({
         'No specific hazard details reported.';
 
 
-      // Popup එක (Click කළාම පේන විස්තරය)
+      // Popup (details shown on click)
       const popup = new maplibregl.Popup({ offset: 15 }).setHTML(`
         <div style="padding: 8px; font-family: sans-serif; min-width: 150px;">
           <strong style="display: block; font-size: 14px; color: #333;">${point.label || 'Location'}</strong>
@@ -205,7 +205,7 @@ export default function ReusableMap({
           'source': sourceId,
           'layout': { 'line-join': 'round', 'line-cap': 'round' },
           'paint': { 
-            // 💡 logic: රතු පාට ලැබෙන්නේ High risk කලාපයක් නිසා නම් පමණයි
+            // 💡 logic: route is red only if it's a High risk area
             'line-color': route.color === 'red' ? '#dc2626' : '#16a34a', 
             'line-width': index === 0 ? 7 : 4,
             'line-opacity': 0.8 
